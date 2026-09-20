@@ -1,0 +1,3408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>云管平台</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- 登录页 -->
+  <div id="login-page" class="page center-page hidden">
+    <div class="login-shell">
+
+      <!-- 左侧：品牌与能力介绍（纯静态文案，不请求接口，避免向未登录访客暴露资源规模） -->
+      <div class="login-intro">
+        <div class="login-intro-logo">
+          <svg width="42" height="42" viewBox="0 0 36 36"><rect width="36" height="36" rx="9" fill="#fff" fill-opacity="0.18"/><path d="M8 24 Q18 9 28 24" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="18" cy="21" r="4" fill="white"/></svg>
+          <h1>云管平台</h1>
+        </div>
+        <p class="tagline">一站式多云资源管理平台。打通 AWS、阿里云与百度智能云，把账号、计算、数据库、网络、存储与费用收敛到同一个入口，用统一的工单与权限流程管理多云资产。</p>
+
+        <div class="login-clouds">
+          <div class="cloud-chip">
+            <div class="cloud-chip-badge" style="background:var(--aws)">AWS</div>
+            <div class="cloud-chip-name">Amazon Web Services</div>
+          </div>
+          <div class="cloud-chip">
+            <div class="cloud-chip-badge" style="background:var(--ali)">阿里云</div>
+            <div class="cloud-chip-name">阿里云</div>
+          </div>
+          <div class="cloud-chip">
+            <div class="cloud-chip-badge" style="background:var(--bai)">百度云</div>
+            <div class="cloud-chip-name">百度智能云</div>
+          </div>
+        </div>
+
+        <div class="login-features">
+          <div class="login-feature"><span class="login-feature-ico">👥</span>账号权限</div>
+          <div class="login-feature"><span class="login-feature-ico">🖥</span>计算</div>
+          <div class="login-feature"><span class="login-feature-ico">💾</span>存储</div>
+          <div class="login-feature"><span class="login-feature-ico">🗄</span>数据库</div>
+          <div class="login-feature"><span class="login-feature-ico">🌐</span>网络</div>
+          <div class="login-feature"><span class="login-feature-ico">💰</span>账单</div>
+        </div>
+      </div>
+
+      <!-- 右侧：登录卡 -->
+      <div class="login-box-wrap">
+        <div class="login-box">
+          <div class="login-header">
+            <div class="brand-logo">
+              <svg width="36" height="36" viewBox="0 0 36 36"><rect width="36" height="36" rx="9" fill="#4F46E5"/><path d="M8 24 Q18 9 28 24" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="18" cy="21" r="4" fill="white"/></svg>
+            </div>
+            <h1>登录云管平台</h1>
+            <p>统一管理 AWS · 阿里云 · 百度智能云</p>
+          </div>
+
+          <!-- 主登录方式：飞书 -->
+          <button type="button" class="btn-primary w-full" id="btn-feishu-login" onclick="feishuLogin()"
+            style="display:flex;align-items:center;justify-content:center;gap:8px;height:46px;font-size:15px">
+            <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="6" fill="#fff" fill-opacity="0.16"/>
+              <path d="M10 22 Q16 10 22 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <circle cx="16" cy="19" r="3" fill="white"/>
+            </svg>
+            使用飞书账号登录
+          </button>
+          <div id="feishu-login-note" class="hidden" style="font-size:12px;color:var(--g400);text-align:center;margin-top:8px">正在跳转到飞书授权...</div>
+
+          <!-- 次要登录方式：账号密码，低调折叠入口（users.name 无唯一约束，故凭据用邮箱） -->
+          <div style="text-align:center;margin-top:24px">
+            <span id="toggle-system-login" onclick="toggleSystemLogin()"
+              style="font-size:11px;color:var(--g400);cursor:pointer;opacity:0.55;user-select:none">账号密码登录</span>
+          </div>
+          <form id="system-login-form" class="hidden" onsubmit="handleLogin(event)" style="margin-top:16px">
+            <div class="field">
+              <label>账号</label>
+              <input type="email" id="login-email" autocomplete="username" placeholder="请输入邮箱账号">
+            </div>
+            <div class="field">
+              <label>密码</label>
+              <input type="password" id="login-password" autocomplete="current-password" placeholder="请输入密码">
+            </div>
+            <div id="login-err" class="err-text"></div>
+            <button type="submit" class="btn-ghost w-full">登录</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 主布局 -->
+  <div id="main-layout" class="layout hidden">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="折叠/展开侧边栏">«</button>
+      <div class="brand">
+        <div id="sidebar-logo-wrap">
+          <img id="sidebar-logo-img" src="" alt="logo" style="display:none;height:28px;width:auto;max-width:120px;object-fit:contain;">
+          <svg id="sidebar-logo-default" width="26" height="26" viewBox="0 0 36 36"><rect width="36" height="36" rx="9" fill="#4F46E5"/><path d="M8 24 Q18 9 28 24" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="18" cy="21" r="4" fill="white"/></svg>
+        </div>
+        <span>云管平台</span>
+      </div>
+      <nav>
+        <a id="nav-overview" class="nav-link active" data-section="overview" onclick="navTo('overview')" style="display:none">
+          <i class="ico">⬡</i> 概览
+        </a>
+
+        <a id="nav-my-profile" class="nav-link" data-section="my-profile" onclick="navTo('my-profile')" style="display:none">
+          <i class="ico">👤</i> 我的资源
+        </a>
+
+        <a id="nav-perm-query" class="nav-link" data-section="perm-query" onclick="navTo('perm-query')" style="display:none">
+          <i class="ico">🔍</i> 资源查询
+        </a>
+
+        <div class="nav-group" id="ng-tickets" style="display:none">
+          <div class="nav-group-header" onclick="toggleNavGroup('tickets')">
+            <i class="nav-group-ico">🎫</i>
+            <span class="nav-group-label">工单申请</span>
+            <span class="nav-group-arrow">›</span>
+          </div>
+          <div class="nav-group-items">
+            <a class="nav-sub-link" data-section="apply-account"  onclick="navTo('apply-account')">账号申请</a>
+            <a class="nav-sub-link" data-section="apply-resource" onclick="navTo('apply-resource')">资源申请</a>
+            <a class="nav-sub-link" data-section="approval-tickets" onclick="navTo('approval-tickets')">申请记录</a>
+          </div>
+        </div>
+
+        <div class="nav-group perm-admin-nav" id="ng-accounts" style="display:none">
+          <div class="nav-group-header" onclick="toggleNavGroup('accounts')">
+            <i class="nav-group-ico">👥</i>
+            <span class="nav-group-label">账号资源</span>
+            <span class="nav-group-arrow">›</span>
+          </div>
+          <div class="nav-group-items">
+            <a class="nav-sub-link" data-section="cloud-accounts" onclick="navTo('cloud-accounts')">云账号</a>
+            <a class="nav-sub-link" data-section="create" onclick="navTo('create')">创建账号</a>
+            <a class="nav-sub-link" data-section="third-accounts" onclick="navTo('third-accounts')">平台工具账号</a>
+            <a class="nav-sub-link" data-section="groups"   onclick="navTo('groups')">组同步</a>
+            <a class="nav-sub-link" data-section="policies" onclick="navTo('policies')">策略管理</a>
+          </div>
+        </div>
+
+        <div class="nav-group" id="ng-compute" style="display:none">
+          <div class="nav-group-header" onclick="toggleNavGroup('compute')">
+            <i class="nav-group-ico">🖥</i>
+            <span class="nav-group-label">计算资源</span>
+            <span class="nav-group-arrow">›</span>
+          </div>
+          <div class="nav-group-items">
+            <a class="nav-sub-link" data-section="instances" onclick="navTo('instances')">云主机</a>
+            <a class="nav-sub-link" data-section="clusters"  onclick="navTo('clusters')">容器集群</a>
+            <a class="nav-sub-link" data-section="pai-dsw"   onclick="navTo('pai-dsw')">PAI DSW</a>
+            <a class="nav-sub-link" data-section="jumpserver" onclick="navTo('jumpserver')">堡垒机管理</a>
+          </div>
+        </div>
+
+        <div class="nav-group" id="ng-database" style="display:none">
+          <div class="nav-group-header" onclick="toggleNavGroup('database')">
+            <i class="nav-group-ico">🗄</i>
+            <span class="nav-group-label">数据库资源</span>
+            <span class="nav-group-arrow">›</span>
+          </div>
+          <div class="nav-group-items">
+            <a class="nav-sub-link" data-section="rds-mysql" onclick="navTo('rds-mysql')">MySQL 实例</a>
+            <a class="nav-sub-link" data-section="rds-postgres" onclick="navTo('rds-postgres')">PostgreSQL 实例</a>
+            <a class="nav-sub-link" data-section="rds-redis" onclick="navTo('rds-redis')">Redis 实例</a>
+          </div>
+        </div>
+
+        <div class="nav-group" id="ng-network" style="display:none">
+          <div class="nav-group-header" onclick="toggleNavGroup('network')">
+            <i class="nav-group-ico">🌐</i>
+            <span class="nav-group-label">网络资源</span>
+            <span class="nav-group-arrow">›</span>
+          </div>
+          <div class="nav-group-items">
+            <a class="nav-sub-link" data-section="security-groups" onclick="navTo('security-groups')">安全组</a>
+            <a class="nav-sub-link" data-section="vpcs"            onclick="navTo('vpcs')">VPC</a>
+            <a class="nav-sub-link" data-section="subnets"         onclick="navTo('subnets')">子网</a>
+            <a class="nav-sub-link" data-section="ssl-certs"       onclick="navTo('ssl-certs')">SSL 证书</a>
+            <a class="nav-sub-link" data-section="dns-records"     onclick="navTo('dns-records')">DNS 解析</a>
+            <a class="nav-sub-link" data-section="vpn-clients"     onclick="navTo('vpn-clients')">VPN 客户端</a>
+          </div>
+        </div>
+
+        <div class="nav-group" id="ng-storage" style="display:none">
+          <div class="nav-group-header" onclick="toggleNavGroup('storage')">
+            <i class="nav-group-ico">💾</i>
+            <span class="nav-group-label">存储资源</span>
+            <span class="nav-group-arrow">›</span>
+          </div>
+          <div class="nav-group-items">
+            <a class="nav-sub-link" data-section="disks"   onclick="navTo('disks')">磁盘</a>
+            <a class="nav-sub-link" data-section="buckets" onclick="navTo('buckets')">对象存储</a>
+            <a class="nav-sub-link" data-section="cpfs"    onclick="navTo('cpfs')">CPFS 存储</a>
+          </div>
+        </div>
+
+        <div class="nav-group" id="ng-billing" style="display:none">
+          <div class="nav-group-header" onclick="toggleNavGroup('billing')">
+            <i class="nav-group-ico">💰</i>
+            <span class="nav-group-label">费用账单</span>
+            <span class="nav-group-arrow">›</span>
+          </div>
+          <div class="nav-group-items">
+            <a class="nav-sub-link" data-section="billing-aws"    onclick="navTo('billing-aws')">AWS 账单</a>
+            <a class="nav-sub-link" data-section="billing-aliyun" onclick="navTo('billing-aliyun')">阿里云账单</a>
+            <a class="nav-sub-link" data-section="billing-baidu"  onclick="navTo('billing-baidu')">百度云账单</a>
+          </div>
+        </div>
+
+        <div class="nav-group perm-admin-nav" id="ng-system" style="display:none">
+          <div class="nav-group-header" onclick="toggleNavGroup('system')">
+            <i class="nav-group-ico">⚙</i>
+            <span class="nav-group-label">系统设置</span>
+            <span class="nav-group-arrow">›</span>
+          </div>
+          <div class="nav-group-items">
+            <a class="nav-sub-link" data-section="roles"         onclick="navTo('roles')">系统角色</a>
+            <a class="nav-sub-link" data-section="admin-accounts" onclick="navTo('admin-accounts')">系统账号</a>
+            <a class="nav-sub-link" data-section="settings"       onclick="navTo('settings')">接入集成</a>
+            <a class="nav-sub-link" data-section="apply-config"   onclick="navTo('apply-config')">申请项配置</a>
+            <a class="nav-sub-link" data-section="audit"          onclick="navTo('audit')">操作审计</a>
+            <a class="nav-sub-link" data-section="feedback"       onclick="navTo('feedback')">反馈管理</a>
+          </div>
+        </div>
+      </nav>
+      <div id="nav-feedback" style="display:none;padding:8px 16px;margin-top:auto">
+        <a onclick="navTo('feedback')" data-section="feedback" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--g400);transition:background .2s"
+          onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''">
+          <span style="font-size:15px">💬</span> 建议反馈
+        </a>
+      </div>
+      <div class="sidebar-user">
+        <div class="avatar" id="nav-avatar">A</div>
+        <div class="user-text">
+          <div class="user-name" id="nav-name">-</div>
+          <div class="user-role" id="nav-user-role">-</div>
+        </div>
+        <button class="logout-btn" onclick="logout()" title="退出">⏻</button>
+      </div>
+    </aside>
+
+    <!-- 内容区 -->
+    <main class="content">
+      <!-- 概览 -->
+      <!-- ── 我的资源画像 ── -->
+      <section id="sec-my-profile" class="sec hidden">
+        <div class="sec-header">
+          <div>
+            <h2 id="profile-title">我的资源</h2>
+            <p class="sub">当前账号下的云资源与权限概览</p>
+          </div>
+        </div>
+        <div id="profile-loading" class="sync-loading hidden"><div class="spin"></div> 加载中...</div>
+        <div id="profile-wrap"></div>
+      </section>
+
+      <!-- 资源查询 -->
+      <section id="sec-perm-query" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>资源查询</h2><p class="sub">查询存储桶权限、DNS 域名使用状态、IP 归属地与全国解析效果</p></div>
+        </div>
+        <div id="perm-query-wrap"></div>
+      </section>
+
+      <section id="sec-overview" class="sec hidden">
+        <div class="sec-header">
+          <div>
+            <h2>概览</h2>
+            <p class="sub">多云平台统一管理仪表盘</p>
+          </div>
+        </div>
+
+        <!-- SSL 证书到期告警（有即将过期证书时才显示，置于最上方） -->
+        <div id="overview-cert-alert" class="hidden" style="margin-bottom:20px"></div>
+
+        <!-- 工单统计 -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--g600);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <span>📋</span>
+            <span>工单申请</span>
+          </div>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#6366f1">📊</div>
+              <div><div class="stat-num" id="st-ticket-total">-</div><div class="stat-label">工单总数</div></div>
+            </div>
+            <div class="stat-card" style="cursor:pointer" onclick="goTicketsWithFilter('pending,approved')" title="查看待处理工单（待审批 + 待授权）">
+              <div class="stat-icon" style="background:#f59e0b">⏳</div>
+              <div><div class="stat-num" id="st-ticket-pending">-</div><div class="stat-label">待处理</div></div>
+            </div>
+            <div class="stat-card" style="cursor:pointer" onclick="goTicketsWithFilter('completed')" title="查看已完成工单">
+              <div class="stat-icon" style="background:#10b981">✓</div>
+              <div><div class="stat-num" id="st-ticket-approved">-</div><div class="stat-label">已通过</div></div>
+            </div>
+            <div class="stat-card" style="cursor:pointer" onclick="goTicketsWithFilter('rejected')" title="查看已拒绝工单">
+              <div class="stat-icon" style="background:#ef4444">✕</div>
+              <div><div class="stat-num" id="st-ticket-rejected">-</div><div class="stat-label">已拒绝</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 云账号统计 -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--g600);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <span>👥</span>
+            <span>云平台账号</span>
+          </div>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#4F46E5">👤</div>
+              <div><div class="stat-num" id="st-user-total">-</div><div class="stat-label">平台用户</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon aws-bg">AWS</div>
+              <div><div class="stat-num" id="st-aws">-</div><div class="stat-label">AWS 账号</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon ali-bg">阿里</div>
+              <div><div class="stat-num" id="st-aliyun">-</div><div class="stat-label">阿里云账号</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon bai-bg">百度</div>
+              <div><div class="stat-num" id="st-baidu">-</div><div class="stat-label">百度云账号</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 云主机统计 -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--g600);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <span>🖥️</span>
+            <span>云主机实例</span>
+          </div>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#8b5cf6">💻</div>
+              <div><div class="stat-num" id="st-instance-total">-</div><div class="stat-label">主机总数</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon aws-bg">EC2</div>
+              <div><div class="stat-num" id="st-instance-aws">-</div><div class="stat-label">AWS 主机</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon ali-bg">ECS</div>
+              <div><div class="stat-num" id="st-instance-aliyun">-</div><div class="stat-label">阿里云主机</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon bai-bg">BCC</div>
+              <div><div class="stat-num" id="st-instance-baidu">-</div><div class="stat-label">百度云主机</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 容器集群统计 -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--g600);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <span>⎈</span>
+            <span>容器集群</span>
+            <span style="font-size:11px;color:var(--g400);font-weight:400">共 <span id="st-cluster-total">-</span> 个集群 / <span id="st-cluster-nodes">-</span> 个节点</span>
+          </div>
+          <div id="st-cluster-list" class="card" style="padding:12px 16px">
+            <div style="color:var(--g400);font-size:13px">加载中...</div>
+          </div>
+        </div>
+
+        <!-- 数据库资源统计 -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--g600);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <span>🗄️</span>
+            <span>数据库实例</span>
+            <span style="font-size:11px;color:var(--g400);font-weight:400">共 <span id="st-rds-total">-</span> 个实例</span>
+          </div>
+          <div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
+            <div class="stat-card">
+              <div class="stat-icon aws-bg">RDS</div>
+              <div><div class="stat-num" id="st-rds-aws">-</div><div class="stat-label">AWS RDS</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon ali-bg">RDS</div>
+              <div><div class="stat-num" id="st-rds-aliyun">-</div><div class="stat-label">阿里云 RDS</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon bai-bg">RDS</div>
+              <div><div class="stat-num" id="st-rds-baidu">-</div><div class="stat-label">百度云 RDS</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#10b981">✓</div>
+              <div><div class="stat-num" id="st-rds-running">-</div><div class="stat-label">运行中</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 当月账单统计 -->
+        <div id="overview-billing-block" style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--g600);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+            <span>💰</span>
+            <span>当月账单</span>
+            <span style="font-size:11px;color:var(--g400);font-weight:400" id="billing-month-label"></span>
+          </div>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#ec4899">¥</div>
+              <div><div class="stat-num" id="st-billing-total">-</div><div class="stat-label">总费用</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon aws-bg">$</div>
+              <div><div class="stat-num" id="st-billing-aws">-</div><div class="stat-label">AWS</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon ali-bg">¥</div>
+              <div><div class="stat-num" id="st-billing-aliyun">-</div><div class="stat-label">阿里云</div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon bai-bg">¥</div>
+              <div><div class="stat-num" id="st-billing-baidu">-</div><div class="stat-label">百度云</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 最近工单 -->
+        <div class="card">
+          <div class="card-title">最近工单</div>
+          <div id="overview-tickets"></div>
+        </div>
+      </section>
+
+      <!-- 云账号列表 -->
+      <section id="sec-cloud-accounts" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>云账号</h2><p class="sub">从云平台同步的全部 IAM/RAM 账号及其权限画像</p></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost" onclick="syncPlatform('aws')">同步 AWS</button>
+            <button class="btn-ghost" onclick="syncPlatform('aliyun')">同步阿里云</button>
+            <button class="btn-ghost" onclick="syncPlatform('baidu')">同步百度云</button>
+            <button class="btn-primary" onclick="syncPlatform('all')">全部同步</button>
+          </div>
+        </div>
+
+        <!-- 同步状态卡片 -->
+        <div class="stat-row" id="sync-stat-row">
+          <div class="sync-stat-card">
+            <div class="sync-stat-header aws-bg">
+              <span>AWS</span><span id="sync-status-aws" class="sync-cred-tip"></span>
+            </div>
+            <div class="sync-stat-body">
+              <div><span class="sync-num" id="sync-total-aws">-</span><label>IAM 账号总数</label></div>
+              <div><span class="sync-num managed" id="sync-managed-aws">-</span><label>本平台创建</label></div>
+            </div>
+            <div class="sync-last" id="sync-last-aws">未同步</div>
+          </div>
+          <div class="sync-stat-card">
+            <div class="sync-stat-header ali-bg">
+              <span>阿里云</span><span id="sync-status-aliyun" class="sync-cred-tip"></span>
+            </div>
+            <div class="sync-stat-body">
+              <div><span class="sync-num" id="sync-total-aliyun">-</span><label>RAM 账号总数</label></div>
+              <div><span class="sync-num managed" id="sync-managed-aliyun">-</span><label>本平台创建</label></div>
+            </div>
+            <div class="sync-last" id="sync-last-aliyun">未同步</div>
+          </div>
+          <div class="sync-stat-card">
+            <div class="sync-stat-header bai-bg">
+              <span>百度云</span><span id="sync-status-baidu" class="sync-cred-tip"></span>
+            </div>
+            <div class="sync-stat-body">
+              <div><span class="sync-num" id="sync-total-baidu">-</span><label>IAM 账号总数</label></div>
+              <div><span class="sync-num managed" id="sync-managed-baidu">-</span><label>本平台创建</label></div>
+            </div>
+            <div class="sync-last" id="sync-last-baidu">未同步</div>
+          </div>
+        </div>
+
+        <div id="cloud-acc-sync-loading" class="sync-loading hidden"><div class="spin"></div> 正在从云平台拉取账号数据...</div>
+        <div class="card">
+          <div id="accounts-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 创建账号向导 -->
+      <section id="sec-create" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>创建账号</h2><p class="sub">创建本地账号，并可同时在各云平台/工具开通子账号并授权</p></div>
+        </div>
+
+        <div class="card">
+          <!-- 步骤指示 -->
+          <div class="steps">
+            <div class="step active" id="step-dot-1"><span>1</span><label>基本信息</label></div>
+            <div class="step-line"></div>
+            <div class="step" id="step-dot-2"><span>2</span><label>选择平台</label></div>
+            <div class="step-line"></div>
+            <div class="step" id="step-dot-3"><span>3</span><label>分配权限</label></div>
+            <div class="step-line"></div>
+            <div class="step" id="step-dot-4"><span>4</span><label>确认创建</label></div>
+          </div>
+
+          <!-- 步骤 1：基本信息 -->
+          <div id="step-1" class="step-content">
+            <div class="step-title">基本信息</div>
+            <div class="step-desc">填写账号的基础信息，密码将用于本地登录及（如启用）云平台控制台登录</div>
+            <div class="form-row">
+              <div class="field" style="flex:1"><label>姓名 <span class="req">*</span></label>
+                <input type="text" id="c-name" placeholder="如 张三" style="margin-top:6px">
+              </div>
+              <div class="field" style="flex:1"><label>邮箱 <span class="req">*</span></label>
+                <input type="email" id="c-email" placeholder="user@example.com" style="margin-top:6px">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="field" style="flex:1"><label>密码 <span class="req">*</span></label>
+                <input type="password" id="c-password" placeholder="至少 8 位，含大小写字母和数字" style="margin-top:6px">
+              </div>
+              <div class="field" style="flex:1"><label>部门</label>
+                <input type="text" id="c-dept" placeholder="可选" style="margin-top:6px">
+              </div>
+            </div>
+            <div class="field"><label>备注</label>
+              <input type="text" id="c-notes" placeholder="可选" style="margin-top:6px">
+            </div>
+            <div id="step1-err" class="err-text"></div>
+            <div class="step-actions">
+              <button class="btn-primary" onclick="goStep(2)">下一步</button>
+            </div>
+          </div>
+
+          <!-- 步骤 2：选择平台 -->
+          <div id="step-2" class="step-content hidden">
+            <div class="step-title">选择云平台 / 工具</div>
+            <div class="step-desc">勾选需要为该账号开通子账号的平台；不勾选则仅创建本地账号</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+              <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--g200);border-radius:8px;cursor:pointer"><input type="checkbox" id="chk-aws" onchange="onPlatformChange()" style="width:auto"> <strong>AWS</strong> <span id="badge-aws" style="font-size:12px;margin-left:auto"></span></label>
+              <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--g200);border-radius:8px;cursor:pointer"><input type="checkbox" id="chk-aliyun" onchange="onPlatformChange()" style="width:auto"> <strong>阿里云</strong> <span id="badge-aliyun" style="font-size:12px;margin-left:auto"></span></label>
+              <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--g200);border-radius:8px;cursor:pointer"><input type="checkbox" id="chk-baidu" onchange="onPlatformChange()" style="width:auto"> <strong>百度云</strong> <span id="badge-baidu" style="font-size:12px;margin-left:auto"></span></label>
+              <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--g200);border-radius:8px;cursor:pointer"><input type="checkbox" id="chk-bytebase" onchange="onPlatformChange()" style="width:auto"> <strong>Bytebase</strong> <span id="badge-bytebase" style="font-size:12px;margin-left:auto"></span></label>
+              <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--g200);border-radius:8px;cursor:pointer"><input type="checkbox" id="chk-jumpserver" onchange="onPlatformChange()" style="width:auto"> <strong>JumpServer</strong> <span id="badge-jumpserver" style="font-size:12px;margin-left:auto"></span></label>
+            </div>
+            <div class="step-actions">
+              <button class="btn-ghost" onclick="goStep(1)">上一步</button>
+              <button class="btn-primary" onclick="goStep(3)">下一步</button>
+            </div>
+          </div>
+
+          <!-- 步骤 3：分配权限 -->
+          <div id="step-3" class="step-content hidden">
+            <div class="step-title">分配权限</div>
+            <div class="step-desc">为每个平台选择权限策略与用户组（Bytebase/JumpServer 无需选择）</div>
+            <div id="no-platform-msg" class="hidden" style="color:var(--g400);padding:20px 0">未选择任何平台，将仅创建本地账号，可直接进入下一步。</div>
+            <div id="policy-panels"></div>
+            <div class="step-actions">
+              <button class="btn-ghost" onclick="goStep(2)">上一步</button>
+              <button class="btn-primary" onclick="goStep(4)">下一步</button>
+            </div>
+          </div>
+
+          <!-- 步骤 4：确认创建 -->
+          <div id="step-4" class="step-content hidden">
+            <div class="step-title">确认信息</div>
+            <div class="step-desc">请核对以下信息，确认无误后创建</div>
+            <div id="review-content"></div>
+            <div id="confirm-actions" class="step-actions">
+              <button class="btn-ghost" onclick="goStep(3)">上一步</button>
+              <button class="btn-primary" id="btn-submit" onclick="submitCreate()">确认创建</button>
+            </div>
+            <div id="create-result" class="hidden" style="margin-top:16px"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 平台工具账号列表 -->
+      <section id="sec-third-accounts" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>平台工具账号</h2><p class="sub">管理 JumpServer、Bytebase、Kuboard、Grafana 等平台工具账号</p></div>
+          <div style="display:flex;gap:8px">
+            <div class="action-dropdown">
+              <button class="btn-ghost" onclick="toggleThirdMenu(event, 'third-create-menu')">+ 创建用户 ▾</button>
+              <div class="action-menu" id="third-create-menu">
+                <div class="action-item" onclick="showCreateJsUserModal()">JumpServer 用户</div>
+                <div class="action-item" onclick="showCreateBbUserModal()">Bytebase 用户</div>
+                <div class="action-item" onclick="showCreateKbUserModal()">Kuboard 用户</div>
+              </div>
+            </div>
+            <div class="action-dropdown">
+              <button class="btn-primary" onclick="toggleThirdMenu(event, 'third-sync-menu')">↻ 同步 ▾</button>
+              <div class="action-menu" id="third-sync-menu">
+                <div class="action-item" onclick="syncPlatform('jumpserver')">同步 JumpServer</div>
+                <div class="action-item" onclick="syncPlatform('kuboard')">同步 Kuboard</div>
+                <div class="action-item" onclick="syncPlatform('third-all')">全部同步</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="third-acc-sync-loading" class="sync-loading hidden"><div class="spin"></div> 正在同步账号...</div>
+        <div class="card">
+          <div id="third-accounts-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 组同步 -->
+      <section id="sec-groups" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>用户组管理</h2><p class="sub">多云统一创建与管理 IAM 用户组</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncGroups('aws')">同步 AWS</button>
+            <button class="btn-ghost" onclick="syncGroups('aliyun')">同步阿里云</button>
+            <button class="btn-ghost" onclick="syncGroups('baidu')">同步百度云</button>
+            <button class="btn-ghost" onclick="syncGroups('all')">全部同步</button>
+            <button class="btn-primary" onclick="showGroupCreateModal()">+ 创建用户组</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setGroupFilter('all',this)">全部</button>
+            <button class="filter-tab" onclick="setGroupFilter('aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setGroupFilter('aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setGroupFilter('baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <input type="text" id="group-keyword" placeholder="搜索组名..." oninput="loadGroups()">
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="groups-loading" class="sync-loading hidden"><div class="spin"></div> 正在从云平台拉取用户组...</div>
+          <div id="groups-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 云主机 -->
+      <section id="sec-instances" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>云主机</h2><p class="sub">管理各云平台的虚拟机实例</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncInstances('all')">⇄ 同步状态</button>
+            <button class="btn-primary" onclick="showCreateInstanceModal()">+ 创建云主机</button>
+          </div>
+        </div>
+        <div class="stat-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#FF9900">AWS</div>
+            <div><div class="stat-num" id="inst-count-aws">0</div><div class="stat-label">AWS 实例</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#FF6A00">阿里</div>
+            <div><div class="stat-num" id="inst-count-aliyun">0</div><div class="stat-label">阿里云实例</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#2932E1">百度</div>
+            <div><div class="stat-num" id="inst-count-baidu">0</div><div class="stat-label">百度云实例</div></div>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs" style="gap:14px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font-size:12px;color:var(--g400)">厂商</span>
+              <button class="filter-tab active" data-instgroup="platform" data-instval="all" onclick="setInstPlatformFilter('all',this)">全部</button>
+              <button class="filter-tab" data-instgroup="platform" data-instval="aws" onclick="setInstPlatformFilter('aws',this)">AWS</button>
+              <button class="filter-tab" data-instgroup="platform" data-instval="aliyun" onclick="setInstPlatformFilter('aliyun',this)">阿里云</button>
+              <button class="filter-tab" data-instgroup="platform" data-instval="baidu" onclick="setInstPlatformFilter('baidu',this)">百度云</button>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font-size:12px;color:var(--g400)">状态</span>
+              <button class="filter-tab active" data-instgroup="status" data-instval="all" onclick="setInstStatusFilter('all',this)">全部</button>
+              <button class="filter-tab" data-instgroup="status" data-instval="running" onclick="setInstStatusFilter('running',this)">运行中</button>
+              <button class="filter-tab" data-instgroup="status" data-instval="stopped" onclick="setInstStatusFilter('stopped',this)">已停止</button>
+            </div>
+          </div>
+          <div class="sync-search">
+            <div class="search-combo">
+              <select id="inst-search-col" onchange="onInstSearch()">
+                <option value="all">全部字段</option>
+                <option value="instance_name">实例名</option>
+                <option value="instance_id">实例 ID</option>
+                <option value="region">区域</option>
+                <option value="public_ip">公网 IP</option>
+                <option value="private_ip">内网 IP</option>
+                <option value="instance_type">规格</option>
+              </select>
+              <input type="text" id="inst-keyword" placeholder="输入关键字..." oninput="onInstSearch()">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="inst-loading" class="sync-loading hidden"><div class="spin"></div> 正在加载云主机...</div>
+          <div id="inst-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 容器集群 -->
+      <section id="sec-clusters" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>容器集群</h2><p class="sub">管理各云平台的 Kubernetes 集群（EKS / ACK / CCE）</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncClusters('aws')" title="同步 AWS EKS 集群">↻ 同步 AWS</button>
+            <button class="btn-ghost" onclick="syncClusters('aliyun')" title="同步阿里云 ACK 集群">↻ 同步阿里云</button>
+            <button class="btn-ghost" onclick="syncClusters('baidu')" title="同步百度云 CCE 集群">↻ 同步百度云</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button id="cl-tab-list" class="filter-tab active" onclick="clTabSwitch('list')">集群列表</button>
+          <button id="cl-tab-groups" class="filter-tab" onclick="clTabSwitch('groups')">业务组管理</button>
+        </div>
+        <div id="cl-tab-list-content">
+        <div class="stat-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card">
+            <div class="stat-icon aws-bg">EKS</div>
+            <div><div class="stat-num" id="cluster-count-aws">0</div><div class="stat-label">AWS 集群</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon ali-bg">ACK</div>
+            <div><div class="stat-num" id="cluster-count-aliyun">0</div><div class="stat-label">阿里云集群</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bai-bg">CCE</div>
+            <div><div class="stat-num" id="cluster-count-baidu">0</div><div class="stat-label">百度云集群</div></div>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setClusterFilter('all',this)">全部</button>
+            <button class="filter-tab" onclick="setClusterFilter('aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setClusterFilter('aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setClusterFilter('baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <input type="text" id="cluster-keyword" placeholder="搜索集群名称或 ID..." oninput="onClusterSearch()">
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="cluster-loading" class="sync-loading hidden"><div class="spin"></div> 正在加载集群...</div>
+          <div id="cluster-table-wrap"></div>
+        </div>
+        </div>
+        <div id="cl-tab-groups-content" style="display:none">
+          <div id="cl-groups-wrap"></div>
+        </div>
+      </section>
+
+      <!-- PAI DSW -->
+      <section id="sec-pai-dsw" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>PAI DSW</h2><p class="sub">阿里云机器学习交互式建模（DSW），一键创建实例并关联已有 CPFS / 数据集</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncPaiDsw()" title="从阿里云同步 DSW 实例">↻ 同步</button>
+            <button class="btn-ghost" onclick="showPaiMembersModal()" title="管理工作区成员与角色">成员管理</button>
+            <button class="btn-primary" onclick="showPaiCreateModal()">+ 创建 DSW</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-search">
+            <input type="text" id="pai-keyword" placeholder="搜索实例名称或 ID..." oninput="onPaiSearch()">
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="pai-loading" class="sync-loading hidden"><div class="spin"></div> 正在加载 DSW 实例...</div>
+          <div id="pai-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 堡垒机管理 -->
+      <section id="sec-jumpserver" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>堡垒机管理</h2><p class="sub">JumpServer 用户组、资产与用户管理</p></div>
+        </div>
+        <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border)">
+          <button id="js-tab-groups" class="filter-tab active" onclick="jsTabSwitch('groups')">用户组</button>
+          <button id="js-tab-assets" class="filter-tab" onclick="jsTabSwitch('assets')">资产</button>
+          <button id="js-tab-users" class="filter-tab" onclick="jsTabSwitch('users')">用户</button>
+        </div>
+        <div id="jumpserver-wrap"></div>
+      </section>
+
+      <!-- MySQL 实例 -->
+      <section id="sec-rds-mysql" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>MySQL 实例</h2><p class="sub">各云平台 MySQL 数据库实例（AWS RDS / 阿里云 RDS / 百度云 RDS）</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncRdsInstances('all')">⇄ 同步实例</button>
+            <button class="btn-primary" onclick="showCreateDbInstanceModal('mysql')">+ 创建实例</button>
+          </div>
+        </div>
+        <div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
+          <div class="stat-card">
+            <div class="stat-icon aws-bg">RDS</div>
+            <div><div class="stat-num" id="mysql-count-aws">0</div><div class="stat-label">AWS</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon ali-bg">RDS</div>
+            <div><div class="stat-num" id="mysql-count-aliyun">0</div><div class="stat-label">阿里云</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bai-bg">RDS</div>
+            <div><div class="stat-num" id="mysql-count-baidu">0</div><div class="stat-label">百度云</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#10b98115;color:#10b981">✓</div>
+            <div><div class="stat-num" id="mysql-count-running">0</div><div class="stat-label">运行中</div></div>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setEngineFilter('mysql','all',this)">全部</button>
+            <button class="filter-tab" onclick="setEngineFilter('mysql','aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setEngineFilter('mysql','aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setEngineFilter('mysql','baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <input type="text" id="mysql-keyword" placeholder="搜索实例名称或 ID..." oninput="onEngineSearch('mysql')">
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="mysql-loading" class="sync-loading hidden"><div class="spin"></div> 正在加载...</div>
+          <div id="mysql-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- PostgreSQL 实例 -->
+      <section id="sec-rds-postgres" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>PostgreSQL 实例</h2><p class="sub">各云平台 PostgreSQL 数据库实例</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncRdsInstances('all')">⇄ 同步实例</button>
+            <button class="btn-primary" onclick="showCreateDbInstanceModal('postgres')">+ 创建实例</button>
+          </div>
+        </div>
+        <div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
+          <div class="stat-card">
+            <div class="stat-icon aws-bg">RDS</div>
+            <div><div class="stat-num" id="postgres-count-aws">0</div><div class="stat-label">AWS</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon ali-bg">RDS</div>
+            <div><div class="stat-num" id="postgres-count-aliyun">0</div><div class="stat-label">阿里云</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bai-bg">RDS</div>
+            <div><div class="stat-num" id="postgres-count-baidu">0</div><div class="stat-label">百度云</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#10b98115;color:#10b981">✓</div>
+            <div><div class="stat-num" id="postgres-count-running">0</div><div class="stat-label">运行中</div></div>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setEngineFilter('postgres','all',this)">全部</button>
+            <button class="filter-tab" onclick="setEngineFilter('postgres','aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setEngineFilter('postgres','aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setEngineFilter('postgres','baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <input type="text" id="postgres-keyword" placeholder="搜索实例名称或 ID..." oninput="onEngineSearch('postgres')">
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="postgres-loading" class="sync-loading hidden"><div class="spin"></div> 正在加载...</div>
+          <div id="postgres-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- Redis 实例 -->
+      <section id="sec-rds-redis" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>Redis 实例</h2><p class="sub">各云平台 Redis 缓存实例</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncRdsInstances('all')">⇄ 同步实例</button>
+            <button class="btn-primary" onclick="showCreateDbInstanceModal('redis')">+ 创建实例</button>
+          </div>
+        </div>
+        <div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
+          <div class="stat-card">
+            <div class="stat-icon aws-bg">Redis</div>
+            <div><div class="stat-num" id="redis-count-aws">0</div><div class="stat-label">AWS</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon ali-bg">Redis</div>
+            <div><div class="stat-num" id="redis-count-aliyun">0</div><div class="stat-label">阿里云</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bai-bg">Redis</div>
+            <div><div class="stat-num" id="redis-count-baidu">0</div><div class="stat-label">百度云</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#10b98115;color:#10b981">✓</div>
+            <div><div class="stat-num" id="redis-count-running">0</div><div class="stat-label">运行中</div></div>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setEngineFilter('redis','all',this)">全部</button>
+            <button class="filter-tab" onclick="setEngineFilter('redis','aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setEngineFilter('redis','aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setEngineFilter('redis','baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <input type="text" id="redis-keyword" placeholder="搜索实例名称或 ID..." oninput="onEngineSearch('redis')">
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="redis-loading" class="sync-loading hidden"><div class="spin"></div> 正在加载...</div>
+          <div id="redis-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 安全组 -->
+      <section id="sec-security-groups" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>安全组</h2><p class="sub">从云平台同步安全组，创建云主机时可直接选择</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncNetResource('sg','aws')">同步 AWS</button>
+            <button class="btn-ghost" onclick="syncNetResource('sg','aliyun')">同步阿里云</button>
+            <button class="btn-ghost" onclick="syncNetResource('sg','baidu')">同步百度云</button>
+            <button class="btn-primary" onclick="syncNetResource('sg','all')">全部同步</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setNetFilter('sg','all',this)">全部</button>
+            <button class="filter-tab" onclick="setNetFilter('sg','aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setNetFilter('sg','aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setNetFilter('sg','baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <div class="search-combo">
+              <select id="sg-search-col" onchange="onNetSearch('sg')">
+                <option value="all">全部字段</option>
+                <option value="sg_id">安全组 ID</option>
+                <option value="sg_name">名称</option>
+                <option value="description">描述</option>
+                <option value="region">地域</option>
+              </select>
+              <input type="text" id="sg-keyword" placeholder="输入关键字..." oninput="onNetSearch('sg')">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="sg-loading" class="sync-loading hidden"><div class="spin"></div> 正在同步安全组...</div>
+          <div id="sg-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- VPC -->
+      <section id="sec-vpcs" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>VPC</h2><p class="sub">从云平台同步 VPC，创建云主机时可直接选择</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncNetResource('vpc','aws')">同步 AWS</button>
+            <button class="btn-ghost" onclick="syncNetResource('vpc','aliyun')">同步阿里云</button>
+            <button class="btn-ghost" onclick="syncNetResource('vpc','baidu')">同步百度云</button>
+            <button class="btn-primary" onclick="syncNetResource('vpc','all')">全部同步</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setNetFilter('vpc','all',this)">全部</button>
+            <button class="filter-tab" onclick="setNetFilter('vpc','aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setNetFilter('vpc','aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setNetFilter('vpc','baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <div class="search-combo">
+              <select id="vpc-search-col" onchange="onNetSearch('vpc')">
+                <option value="all">全部字段</option>
+                <option value="vpc_id">VPC ID</option>
+                <option value="vpc_name">名称</option>
+                <option value="cidr">CIDR</option>
+                <option value="description">描述</option>
+                <option value="region">地域</option>
+              </select>
+              <input type="text" id="vpc-keyword" placeholder="输入关键字..." oninput="onNetSearch('vpc')">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="vpc-loading" class="sync-loading hidden"><div class="spin"></div> 正在同步 VPC...</div>
+          <div id="vpc-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 子网 -->
+      <section id="sec-subnets" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>子网</h2><p class="sub">从云平台同步子网（阿里云对应交换机 VSwitch），创建云主机时可直接选择</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncNetResource('subnet','aws')">同步 AWS</button>
+            <button class="btn-ghost" onclick="syncNetResource('subnet','aliyun')">同步阿里云</button>
+            <button class="btn-ghost" onclick="syncNetResource('subnet','baidu')">同步百度云</button>
+            <button class="btn-primary" onclick="syncNetResource('subnet','all')">全部同步</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setNetFilter('subnet','all',this)">全部</button>
+            <button class="filter-tab" onclick="setNetFilter('subnet','aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setNetFilter('subnet','aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setNetFilter('subnet','baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <div class="search-combo">
+              <select id="subnet-search-col" onchange="onNetSearch('subnet')">
+                <option value="all">全部字段</option>
+                <option value="subnet_id">子网 ID</option>
+                <option value="subnet_name">名称</option>
+                <option value="vpc_id">VPC ID</option>
+                <option value="cidr">CIDR</option>
+                <option value="zone">可用区</option>
+              </select>
+              <input type="text" id="subnet-keyword" placeholder="输入关键字..." oninput="onNetSearch('subnet')">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="subnet-loading" class="sync-loading hidden"><div class="spin"></div> 正在同步子网...</div>
+          <div id="subnet-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- SSL 证书 -->
+      <section id="sec-ssl-certs" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>SSL 证书</h2><p class="sub">从云平台同步 SSL/TLS 证书，查看证书域名、状态及到期时间</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncNetResource('cert','aws')">同步 AWS</button>
+            <button class="btn-ghost" onclick="syncNetResource('cert','aliyun')">同步阿里云</button>
+            <button class="btn-ghost" onclick="syncNetResource('cert','baidu')">同步百度云</button>
+            <button class="btn-primary" onclick="syncNetResource('cert','all')">全部同步</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setNetFilter('cert','all',this)">全部</button>
+            <button class="filter-tab" onclick="setNetFilter('cert','aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setNetFilter('cert','aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setNetFilter('cert','baidu',this)">百度云</button>
+            <button class="filter-tab cert-expiring-btn" data-days="30" style="margin-left:12px" onclick="toggleCertExpiringOnly(this,30)">⚠ 30 天内过期</button>
+            <button class="filter-tab cert-expiring-btn" data-days="60" onclick="toggleCertExpiringOnly(this,60)">⚠ 60 天内过期</button>
+          </div>
+          <div class="sync-search">
+            <div class="search-combo">
+              <select id="cert-search-col" onchange="onNetSearch('cert')">
+                <option value="all">全部字段</option>
+                <option value="domain">域名</option>
+                <option value="cert_name">证书名称</option>
+                <option value="status">状态</option>
+              </select>
+              <input type="text" id="cert-keyword" placeholder="输入关键字..." oninput="onNetSearch('cert')">
+            </div>
+          </div>
+        </div>
+        <div id="cert-expiry-bar" class="hidden" style="margin-bottom:12px"></div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="cert-loading" class="sync-loading hidden"><div class="spin"></div> 正在同步证书...</div>
+          <div id="cert-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- DNS 解析 -->
+      <section id="sec-dns-records" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>DNS 解析</h2><p class="sub">从云平台同步域名解析记录（AWS Route53 / 阿里云 DNS / 百度云 DNS）</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncNetResource('dns','aws')">同步 AWS</button>
+            <button class="btn-ghost" onclick="syncNetResource('dns','aliyun')">同步阿里云</button>
+            <button class="btn-ghost" onclick="syncNetResource('dns','baidu')">同步百度云</button>
+            <button class="btn-primary" onclick="syncNetResource('dns','all')">全部同步</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setNetFilter('dns','all',this)">全部</button>
+            <button class="filter-tab" onclick="setNetFilter('dns','aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setNetFilter('dns','aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setNetFilter('dns','baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <div class="search-combo">
+              <select id="dns-search-col" onchange="onNetSearch('dns')">
+                <option value="all">全部字段</option>
+                <option value="zone_name">域名</option>
+                <option value="record_name">主机记录</option>
+                <option value="record_type">类型</option>
+                <option value="record_value">记录值</option>
+              </select>
+              <input type="text" id="dns-keyword" placeholder="输入关键字..." oninput="onNetSearch('dns')">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="dns-loading" class="sync-loading hidden"><div class="spin"></div> 正在同步 DNS 记录...</div>
+          <div id="dns-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- VPN 客户端 -->
+      <section id="sec-vpn-clients" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>VPN 客户端</h2><p class="sub">创建并管理 SSL VPN 客户端账号（阿里云证书 / 百度云 SSL 用户）</p></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div class="perm-operate" style="display:flex;gap:8px">
+              <button class="btn-ghost" onclick="syncVpnClients('aliyun')" title="从阿里云同步 SSL VPN 客户端证书">↻ 同步阿里云</button>
+              <button class="btn-ghost" onclick="syncVpnClients('baidu')" title="从百度云同步 SSL VPN 用户">↻ 同步百度云</button>
+              <button class="btn-primary" onclick="showVpnCreateModal()">创建 VPN 客户端</button>
+            </div>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setVpnFilter('all',this)">全部</button>
+            <button class="filter-tab" onclick="setVpnFilter('aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setVpnFilter('baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <div class="search-combo">
+              <select id="vpn-search-col" onchange="_filterVpnClients()">
+                <option value="all">全部字段</option>
+                <option value="client_name">客户端名</option>
+                <option value="server_name">服务器</option>
+                <option value="region">地域</option>
+              </select>
+              <input type="text" id="vpn-keyword" placeholder="输入关键字..." oninput="_filterVpnClients()">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="vpn-clients-loading" class="sync-loading hidden"><div class="spin"></div> 正在加载...</div>
+          <div id="vpn-clients-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 策略管理 -->
+      <section id="sec-policies" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>策略管理</h2><p class="sub">查看和创建各云平台自定义 IAM 策略</p></div>
+          <button class="btn-primary perm-operate" onclick="showPolicyCreateModal()">+ 创建策略</button>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setPolicyPlatform('all',this)">全部</button>
+            <button class="filter-tab" onclick="setPolicyPlatform('aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setPolicyPlatform('aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setPolicyPlatform('baidu',this)">百度云</button>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="policies-loading" class="sync-loading hidden"><div class="spin"></div> 正在拉取策略...</div>
+          <div id="policies-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 存储资源 -->
+      <section id="sec-disks" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>磁盘</h2><p class="sub">管理云平台磁盘/云硬盘资源</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncDisks('aws')">同步 AWS</button>
+            <button class="btn-ghost" onclick="syncDisks('aliyun')">同步阿里云</button>
+            <button class="btn-ghost" onclick="syncDisks('baidu')">同步百度云</button>
+            <button class="btn-primary" onclick="syncDisks('all')">全部同步</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setDiskFilter('all',this)">全部</button>
+            <button class="filter-tab" onclick="setDiskFilter('aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setDiskFilter('aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setDiskFilter('baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <div class="search-combo">
+              <select id="disk-search-col" onchange="_filterDisks()">
+                <option value="all">全部字段</option>
+                <option value="disk_id">磁盘 ID</option>
+                <option value="disk_name">名称</option>
+                <option value="instance_id">实例 ID</option>
+                <option value="region">地域</option>
+              </select>
+              <input type="text" id="disk-keyword" placeholder="输入关键字..." oninput="_filterDisks()">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="disks-loading" class="sync-loading hidden"><div class="spin"></div> 正在同步磁盘...</div>
+          <div id="disks-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 对象存储 -->
+      <section id="sec-buckets" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>对象存储</h2><p class="sub">管理 AWS S3 / 阿里云 OSS / 百度云 BOS Bucket</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="syncBuckets('aws')">同步 AWS</button>
+            <button class="btn-ghost" onclick="syncBuckets('aliyun')">同步阿里云</button>
+            <button class="btn-ghost" onclick="syncBuckets('baidu')">同步百度云</button>
+            <button class="btn-primary" onclick="showBucketCreateModal()">+ 创建 Bucket</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab active" onclick="setBucketFilter('all',this)">全部</button>
+            <button class="filter-tab" onclick="setBucketFilter('aws',this)">AWS</button>
+            <button class="filter-tab" onclick="setBucketFilter('aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setBucketFilter('baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <input type="text" id="bucket-keyword" placeholder="搜索 Bucket 名称..." oninput="_filterBuckets()">
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="buckets-loading" class="sync-loading hidden"><div class="spin"></div> 正在同步 Bucket...</div>
+          <div id="buckets-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- CPFS 存储 -->
+      <section id="sec-cpfs" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>并行文件存储</h2><p class="sub" id="cpfs-fs-sub">管理各云平台并行文件存储（阿里云 CPFS / AWS FSx / 百度云 PFS）</p></div>
+          <div style="display:flex;gap:8px" class="perm-operate">
+            <button class="btn-ghost" onclick="loadCpfs()">↻ 刷新</button>
+          </div>
+        </div>
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs">
+            <button class="filter-tab" onclick="setCpfsPlatform('aws',this)">AWS</button>
+            <button class="filter-tab active" onclick="setCpfsPlatform('aliyun',this)">阿里云</button>
+            <button class="filter-tab" onclick="setCpfsPlatform('baidu',this)">百度云</button>
+          </div>
+          <div class="sync-search">
+            <input type="text" id="cpfs-keyword" placeholder="搜索 fileset 名称 / 路径..." oninput="_filterCpfs()">
+          </div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="cpfs-loading" class="sync-loading hidden"><div class="spin"></div> 正在加载...</div>
+          <div id="cpfs-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 费用账单 -->
+      <section id="sec-billing" class="sec hidden">
+        <div class="sec-header">
+          <div><h2 id="billing-title">费用账单</h2><p class="sub" id="billing-sub">查看云平台费用明细</p></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="billing-year" onchange="loadBilling()" style="height:36px;padding:0 10px;border:1px solid var(--g200);border-radius:6px;font-size:13px"></select>
+            <select id="billing-month" onchange="loadBilling()" style="height:36px;padding:0 10px;border:1px solid var(--g200);border-radius:6px;font-size:13px"></select>
+            <button class="btn-primary" onclick="loadBilling()">查询</button>
+          </div>
+        </div>
+        <div id="billing-content"></div>
+      </section>
+
+      <!-- 系统角色 -->
+      <section id="sec-roles" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>系统角色</h2><p class="sub">定义系统账号可访问的菜单范围与操作权限</p></div>
+          <button class="btn-primary" onclick="showRoleCreateModal()">+ 创建角色</button>
+        </div>
+        <div class="table-wrap" id="roles-table-wrap">
+          <div class="empty-tip">加载中...</div>
+        </div>
+      </section>
+
+      <!-- 系统账号 -->
+      <section id="sec-admin-accounts" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>账号管理</h2><p class="sub">系统账号（邮箱密码登录）与飞书登录用户的统一管理</p></div>
+          <button class="btn-primary" id="admin-create-btn" onclick="showAdminCreateModal()">+ 创建系统账号</button>
+        </div>
+        <div class="sync-filter-tabs" style="margin-bottom:14px">
+          <button class="filter-tab active" id="acctab-system" onclick="switchAccountTab('system')">系统账号</button>
+          <button class="filter-tab" id="acctab-feishu" onclick="switchAccountTab('feishu')">飞书登录用户</button>
+        </div>
+        <div id="admin-accounts-panel">
+          <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="search-field" style="flex:1;min-width:220px">
+              <input type="text" class="search-input" id="admin-search" placeholder="搜索姓名 / 邮箱…" oninput="filterAdminAccounts(this.value)">
+            </span>
+            <span id="admin-count" style="font-size:12px;color:var(--g500)"></span>
+          </div>
+          <div class="table-wrap" id="admin-accounts-table-wrap">
+            <div class="empty-tip">加载中...</div>
+          </div>
+        </div>
+        <div id="feishu-users-panel" class="hidden">
+          <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="search-field" style="flex:1;min-width:220px">
+              <input type="text" class="search-input" id="feishu-search" placeholder="搜索姓名 / 邮箱 / OpenID…" oninput="filterFeishuUsers(this.value)">
+            </span>
+            <span id="feishu-count" style="font-size:12px;color:var(--g500)"></span>
+          </div>
+          <div class="table-wrap" id="feishu-users-table-wrap">
+            <div class="empty-tip">加载中...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 云平台配置 -->
+      <section id="sec-settings" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>接入集成</h2><p class="sub">管理云平台及第三方系统的接入凭据</p></div>
+        </div>
+
+        <!-- Tab 导航 -->
+        <div class="filter-bar">
+          <button class="filter-tab active" onclick="switchIntegrationTab('cloud', this)">云平台</button>
+          <button class="filter-tab" onclick="switchIntegrationTab('feishu', this)">飞书</button>
+          <button class="filter-tab" onclick="switchIntegrationTab('jumpserver', this)">JumpServer</button>
+          <button class="filter-tab" onclick="switchIntegrationTab('bytebase', this)">Bytebase</button>
+          <button class="filter-tab" onclick="switchIntegrationTab('kuboard', this)">Kuboard</button>
+          <button class="filter-tab" onclick="switchIntegrationTab('grafana-aws', this)">Grafana-AWS</button>
+          <button class="filter-tab" onclick="switchIntegrationTab('grafana-wuwen', this)">Grafana-无问</button>
+          <button class="filter-tab" onclick="switchIntegrationTab('grafana-baidu', this)">Grafana-百度</button>
+          <button class="filter-tab" onclick="switchIntegrationTab('sso', this)">SSO 单点登录</button>
+        </div>
+
+        <!-- ── 云平台 Tab ── -->
+        <div id="itab-cloud">
+          <!-- Logo 设置 -->
+          <div class="logo-setting-card">
+            <div class="logo-setting-left">
+              <strong>平台 Logo</strong>
+              <p>替换左上角的平台图标，支持 PNG / SVG / JPG，建议高度 28px 以上</p>
+            </div>
+            <div class="logo-setting-right">
+              <div id="logo-preview-wrap">
+                <img id="logo-preview-img" src="" alt="logo" style="display:none;max-height:48px;max-width:160px;object-fit:contain;">
+                <svg id="logo-preview-default" width="32" height="32" viewBox="0 0 36 36"><rect width="36" height="36" rx="9" fill="#4F46E5"/><path d="M8 24 Q18 9 28 24" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="18" cy="21" r="4" fill="white"/></svg>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <label class="btn-ghost btn-sm" style="cursor:pointer">
+                  上传图片
+                  <input type="file" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
+                </label>
+                <button class="btn-ghost btn-sm" onclick="removeLogo()" id="logo-remove-btn" style="display:none">恢复默认</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="settings-card" id="settings-aws">
+              <div class="settings-platform-header aws-bg-light">
+                <div class="settings-logo aws-bg">AWS</div>
+                <div>
+                  <strong>Amazon Web Services</strong>
+                  <span>IAM 主账号凭据</span>
+                </div>
+                <div class="cred-status" id="cred-status-aws"></div>
+              </div>
+              <div class="settings-form">
+                <div class="field">
+                  <label>Access Key ID</label>
+                  <input type="text" id="s-aws-ak" placeholder="AKIA...">
+                </div>
+                <div class="field">
+                  <label>Secret Access Key</label>
+                  <input type="password" id="s-aws-sk" placeholder="请输入 Secret Access Key">
+                </div>
+                <div class="field">
+                  <label>默认区域</label>
+                  <select id="s-aws-region">
+                    <option value="us-east-1">美国东部 us-east-1</option>
+                    <option value="us-west-2">美国西部 us-west-2</option>
+                    <option value="cn-north-1">中国北京 cn-north-1</option>
+                    <option value="cn-northwest-1">中国宁夏 cn-northwest-1</option>
+                    <option value="ap-northeast-1">亚太东京 ap-northeast-1</option>
+                    <option value="ap-southeast-1">亚太新加坡 ap-southeast-1</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>SSH 密钥对名称（用于创建云主机）</label>
+                  <input type="text" id="s-aws-ssh-key" placeholder="如：my-keypair">
+                </div>
+                <div class="settings-actions">
+                  <button class="btn-ghost" onclick="testCred('aws')">测试连接</button>
+                  <button class="btn-primary" onclick="saveCred('aws')">保存配置</button>
+                  <button class="btn-danger" onclick="deleteCred('aws')">删除</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-card" id="settings-aliyun">
+              <div class="settings-platform-header ali-bg-light">
+                <div class="settings-logo ali-bg">阿里云</div>
+                <div>
+                  <strong>阿里云</strong>
+                  <span>RAM 主账号凭据</span>
+                </div>
+                <div class="cred-status" id="cred-status-aliyun"></div>
+              </div>
+              <div class="settings-form">
+                <div class="field">
+                  <label>AccessKey ID</label>
+                  <input type="text" id="s-ali-ak" placeholder="LTAI5t...">
+                </div>
+                <div class="field">
+                  <label>AccessKey Secret</label>
+                  <input type="password" id="s-ali-sk" placeholder="请输入 AccessKey Secret">
+                </div>
+                <div class="field">
+                  <label>默认地域</label>
+                  <select id="s-ali-region">
+                    <option value="cn-hangzhou">华东1 杭州</option>
+                    <option value="cn-shanghai">华东2 上海</option>
+                    <option value="cn-beijing">华北2 北京</option>
+                    <option value="cn-shenzhen">华南1 深圳</option>
+                    <option value="cn-hongkong">中国香港</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>SSH 密钥对名称（用于创建云主机）</label>
+                  <input type="text" id="s-ali-ssh-key" placeholder="如：my-keypair">
+                </div>
+                <div class="settings-actions">
+                  <button class="btn-ghost" onclick="testCred('aliyun')">测试连接</button>
+                  <button class="btn-primary" onclick="saveCred('aliyun')">保存配置</button>
+                  <button class="btn-danger" onclick="deleteCred('aliyun')">删除</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-card" id="settings-baidu">
+              <div class="settings-platform-header bai-bg-light">
+                <div class="settings-logo bai-bg">百度云</div>
+                <div>
+                  <strong>百度智能云</strong>
+                  <span>IAM 主账号凭据</span>
+                </div>
+                <div class="cred-status" id="cred-status-baidu"></div>
+              </div>
+              <div class="settings-form">
+                <div class="field">
+                  <label>Access Key</label>
+                  <input type="text" id="s-bai-ak" placeholder="请输入 Access Key">
+                </div>
+                <div class="field">
+                  <label>Secret Key</label>
+                  <input type="password" id="s-bai-sk" placeholder="请输入 Secret Key">
+                </div>
+                <div class="field">
+                  <label>默认区域</label>
+                  <select id="s-bai-region">
+                    <option value="bj">华北-北京</option>
+                    <option value="gz">华南-广州</option>
+                    <option value="su">华东-苏州</option>
+                    <option value="hkg">港澳台-香港</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>SSH 密钥对名称（用于创建云主机）</label>
+                  <input type="text" id="s-bai-ssh-key" placeholder="如：my-keypair">
+                </div>
+                <div class="settings-actions">
+                  <button class="btn-ghost" onclick="testCred('baidu')">测试连接</button>
+                  <button class="btn-primary" onclick="saveCred('baidu')">保存配置</button>
+                  <button class="btn-danger" onclick="deleteCred('baidu')">删除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mt24">
+            <div class="card-title">使用说明</div>
+            <div class="guide-list">
+              <div class="guide-item">
+                <div class="guide-num">1</div>
+                <div>在此页面为每个云平台配置具有 IAM 管理权限的主账号 AccessKey</div>
+              </div>
+              <div class="guide-item">
+                <div class="guide-num">2</div>
+                <div>创建账号时勾选云平台，系统将自动在对应云平台创建 IAM 子账号并授权</div>
+              </div>
+              <div class="guide-item">
+                <div class="guide-num">3</div>
+                <div>AWS 需安装 SDK：<code>npm install @aws-sdk/client-iam</code></div>
+              </div>
+              <div class="guide-item">
+                <div class="guide-num">4</div>
+                <div>阿里云需安装 SDK：<code>npm install @alicloud/pop-core</code></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── 飞书 Tab ── -->
+        <div id="itab-feishu" class="hidden">
+          <div class="card" style="max-width:640px">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div class="field">
+                <label>App ID <span class="req">*</span></label>
+                <input type="text" id="fs-app-id" placeholder="cli_xxxxxxxxxxxxxxxx">
+              </div>
+              <div class="field">
+                <label>App Secret <span class="req">*</span></label>
+                <input type="password" id="fs-app-secret" placeholder="留空表示不修改">
+              </div>
+              <div class="field">
+                <label>管理员 OpenID <span class="req">*</span></label>
+                <input type="text" id="fs-approver" placeholder="ou_xxxxxxxxxxxxxxxx">
+                <div style="margin-top:4px;font-size:12px;color:var(--g500)">用于接收工单通知私信，以及代发审批实例。与飞书审批流中的审批人无关。</div>
+              </div>
+              <div class="field">
+                <label>Verification Token</label>
+                <input type="password" id="fs-vtoken" placeholder="飞书事件订阅中的 Verification Token（可选）">
+              </div>
+              <div class="field">
+                <label>Encrypt Key</label>
+                <input type="password" id="fs-ekey" placeholder="开启加密推送时填写（可选）">
+              </div>
+              <div class="field">
+                <label>平台访问地址</label>
+                <input type="text" id="fs-platform-url" placeholder="https://cmp.example.com（用于飞书通知中的跳转链接）">
+              </div>
+              <div class="field">
+                <label>审批定义 Code <span class="req">*</span></label>
+                <input type="text" id="fs-approval-code" placeholder="请在飞书审批后台创建审批流，然后填入 approval_code">
+                <div style="margin-top:4px;font-size:12px;color:var(--g500)">
+                  ① 飞书工作台 → 审批 → 创建审批 → 自定义表单<br>
+                  ② 配置审批流程（审批人、表单字段等）<br>
+                  ③ 发布后，在审批详情页复制「审批定义 Code」粘贴到此处
+                </div>
+              </div>
+              <div class="field">
+                <label>OAuth 回调地址（填入飞书开放平台「安全设置 → 重定向 URL」）</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input type="text" id="fs-oauth-callback" readonly style="background:var(--g50);color:var(--g500)">
+                  <button class="btn-ghost" style="white-space:nowrap" onclick="copyOauthCallback()">复制</button>
+                </div>
+              </div>
+              <div class="field">
+                <label>Webhook 回调地址（填入飞书开放平台事件订阅）</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input type="text" id="fs-webhook-url" readonly style="background:var(--g50);color:var(--g500)">
+                  <button class="btn-ghost" style="white-space:nowrap" onclick="copyWebhookUrl()">复制</button>
+                </div>
+              </div>
+              <div id="fs-msg" class="err-text"></div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn-ghost" onclick="testFeishuConn()">测试连接</button>
+                <button class="btn-primary" onclick="saveFeishuConfig()">保存配置</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── JumpServer Tab ── -->
+        <div id="itab-jumpserver" class="hidden">
+          <div class="settings-card" style="max-width:480px">
+            <div class="settings-platform-header" style="background:#fff3e0">
+              <div class="settings-logo" style="background:#e65c00;color:#fff">JS</div>
+              <div>
+                <strong>JumpServer</strong>
+                <span>堡垒机 API 接入</span>
+              </div>
+              <div class="cred-status" id="cred-status-jumpserver"></div>
+            </div>
+            <div class="settings-form">
+              <div class="field">
+                <label>JumpServer 地址</label>
+                <input type="text" id="s-js-url" placeholder="https://jumpserver.example.com">
+              </div>
+              <div class="field">
+                <label>Access Key ID</label>
+                <input type="text" id="s-js-ak" placeholder="用户中心 → API Key → KeyID">
+              </div>
+              <div class="field">
+                <label>Access Key Secret</label>
+                <input type="password" id="s-js-sk" placeholder="用户中心 → API Key → SecretKey">
+              </div>
+              <div class="settings-actions">
+                <button class="btn-ghost" onclick="testCred('jumpserver')">测试连接</button>
+                <button class="btn-primary" onclick="saveCred('jumpserver')">保存配置</button>
+                <button class="btn-danger" onclick="deleteCred('jumpserver')">删除</button>
+              </div>
+            </div>
+          </div>
+          <div class="card mt24" style="max-width:480px">
+            <div class="card-title">使用说明</div>
+            <div class="guide-list">
+              <div class="guide-item"><div class="guide-num">1</div><div>在 JumpServer「用户中心 → API Key」页面创建 Access Key，获取 KeyID 和 SecretKey</div></div>
+              <div class="guide-item"><div class="guide-num">2</div><div>创建平台账号时勾选 JumpServer，系统将自动同步创建用户</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Bytebase Tab ── -->
+        <div id="itab-bytebase" class="hidden">
+          <div class="settings-card" style="max-width:640px">
+            <div class="settings-platform-header" style="background:#eef2ff">
+              <div class="settings-logo bb-bg">BB</div>
+              <div>
+                <strong>Bytebase</strong>
+                <span>数据库管理平台接入（支持多实例）</span>
+              </div>
+              <button class="btn-primary btn-sm" style="margin-left:auto" onclick="showBytebaseInstanceModal()">+ 添加实例</button>
+            </div>
+            <div class="settings-form">
+              <div id="bytebase-instances-list"><div class="empty-tip">加载中...</div></div>
+            </div>
+          </div>
+          <div class="card mt24" style="max-width:480px">
+            <div class="card-title">使用说明</div>
+            <div class="guide-list">
+              <div class="guide-item"><div class="guide-num">1</div><div>在 Bytebase「设置 → 服务账号」中创建账号并生成 Token</div></div>
+              <div class="guide-item"><div class="guide-num">2</div><div>创建平台账号时勾选 Bytebase，系统将自动添加为项目成员</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Kuboard Tab ── -->
+        <div id="itab-kuboard" class="hidden">
+          <div class="settings-card" style="max-width:480px">
+            <div class="settings-platform-header" style="background:#e3f2fd">
+              <div class="settings-logo" style="background:#1565c0;color:#fff">KB</div>
+              <div>
+                <strong>Kuboard</strong>
+                <span>Kubernetes 集群可视化管理</span>
+              </div>
+              <div class="cred-status" id="cred-status-kuboard"></div>
+            </div>
+            <div class="settings-form">
+              <div class="field">
+                <label>Kuboard 地址</label>
+                <input type="text" id="s-kb-url" placeholder="https://kuboard.example.com">
+              </div>
+              <div class="field">
+                <label>登录用户名 <span style="color:var(--g400);font-weight:normal;font-size:11.5px">（生成访问密钥的账号，非 admin）</span></label>
+                <input type="text" id="s-kb-username" placeholder="zhangpengfei">
+              </div>
+              <div class="field">
+                <label>访问密钥 ID</label>
+                <input type="text" id="s-kb-keyid" placeholder="如 3a6yc828767c">
+              </div>
+              <div class="field">
+                <label>访问密钥 <span id="s-kb-token-hint" style="color:var(--g400);font-weight:normal;font-size:11.5px">（Kuboard 用户中心生成）</span></label>
+                <input type="password" id="s-kb-token" placeholder="如 tw8c8nkiabjndfstyzma7wf3i46cjt2d">
+              </div>
+              <div class="field">
+                <label>CF-Access-Client-Id <span style="color:var(--g400);font-weight:normal;font-size:11.5px">（过 Cloudflare 用，可选）</span></label>
+                <input type="text" id="s-kb-cfid" placeholder="xxx.access">
+              </div>
+              <div class="field">
+                <label>CF-Access-Client-Secret <span id="s-kb-cfsecret-hint" style="color:var(--g400);font-weight:normal;font-size:11.5px">（可选）</span></label>
+                <input type="password" id="s-kb-cfsecret" placeholder="Cloudflare Access Client Secret">
+              </div>
+              <div class="settings-actions">
+                <button class="btn-ghost" onclick="testCred('kuboard')">测试连接</button>
+                <button class="btn-primary" onclick="saveCred('kuboard')">保存配置</button>
+                <button class="btn-danger" onclick="deleteCred('kuboard')">删除</button>
+              </div>
+            </div>
+          </div>
+          <div class="card mt24" style="max-width:480px">
+            <div class="card-title">使用说明</div>
+            <div class="guide-list">
+              <div class="guide-item"><div class="guide-num">1</div><div>在 Kuboard 右上角「个人设置 → 访问密钥」中创建密钥，完整格式为「密钥ID.密钥」</div></div>
+              <div class="guide-item"><div class="guide-num">2</div><div>登录用户名填生成该密钥的账号名（如 zhangpengfei），不能填 admin</div></div>
+              <div class="guide-item"><div class="guide-num">3</div><div>创建平台账号时勾选 Kuboard，系统将自动在 Kuboard 中创建同名用户</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Grafana-AWS Tab ── -->
+        <div id="itab-grafana-aws" class="hidden">
+          <div class="settings-card" style="max-width:480px">
+            <div class="settings-platform-header" style="background:#fff3e0">
+              <div class="settings-logo" style="background:#ff6f00;color:#fff">GF</div>
+              <div>
+                <strong>Grafana (AWS)</strong>
+                <span>AWS 环境 Grafana 接入</span>
+              </div>
+              <div class="cred-status" id="cred-status-grafana-aws"></div>
+            </div>
+            <div class="settings-form">
+              <div class="field">
+                <label>Grafana 地址</label>
+                <input type="text" id="s-grafana-aws-url" placeholder="https://grafana-aws.example.com">
+              </div>
+              <div class="field">
+                <label>API Key</label>
+                <input type="password" id="s-grafana-aws-token" placeholder="Service Account Token 或 API Key">
+              </div>
+              <div class="settings-actions">
+                <button class="btn-ghost" onclick="testCred('grafana-aws')">测试连接</button>
+                <button class="btn-primary" onclick="saveCred('grafana-aws')">保存配置</button>
+                <button class="btn-danger" onclick="deleteCred('grafana-aws')">删除</button>
+              </div>
+            </div>
+          </div>
+          <div class="card mt24" style="max-width:480px">
+            <div class="card-title">使用说明</div>
+            <div class="guide-list">
+              <div class="guide-item"><div class="guide-num">1</div><div>在 Grafana「Configuration → Service Accounts」中创建 Service Account 并生成 Token</div></div>
+              <div class="guide-item"><div class="guide-num">2</div><div>创建平台账号时勾选 Grafana (AWS)，系统将记录申请信息，需手动在 Grafana 控制台创建用户</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Grafana-无问 Tab ── -->
+        <div id="itab-grafana-wuwen" class="hidden">
+          <div class="settings-card" style="max-width:480px">
+            <div class="settings-platform-header" style="background:#e8f5e9">
+              <div class="settings-logo" style="background:#2e7d32;color:#fff">GF</div>
+              <div>
+                <strong>Grafana (无问)</strong>
+                <span>无问环境 Grafana 接入</span>
+              </div>
+              <div class="cred-status" id="cred-status-grafana-wuwen"></div>
+            </div>
+            <div class="settings-form">
+              <div class="field">
+                <label>Grafana 地址</label>
+                <input type="text" id="s-grafana-wuwen-url" placeholder="https://grafana-wuwen.example.com">
+              </div>
+              <div class="field">
+                <label>API Key</label>
+                <input type="password" id="s-grafana-wuwen-token" placeholder="Service Account Token 或 API Key">
+              </div>
+              <div class="settings-actions">
+                <button class="btn-ghost" onclick="testCred('grafana-wuwen')">测试连接</button>
+                <button class="btn-primary" onclick="saveCred('grafana-wuwen')">保存配置</button>
+                <button class="btn-danger" onclick="deleteCred('grafana-wuwen')">删除</button>
+              </div>
+            </div>
+          </div>
+          <div class="card mt24" style="max-width:480px">
+            <div class="card-title">使用说明</div>
+            <div class="guide-list">
+              <div class="guide-item"><div class="guide-num">1</div><div>在 Grafana「Configuration → Service Accounts」中创建 Service Account 并生成 Token</div></div>
+              <div class="guide-item"><div class="guide-num">2</div><div>创建平台账号时勾选 Grafana (无问)，系统将记录申请信息，需手动在 Grafana 控制台创建用户</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Grafana-百度 Tab ── -->
+        <div id="itab-grafana-baidu" class="hidden">
+          <div class="settings-card" style="max-width:480px">
+            <div class="settings-platform-header" style="background:#e3f2fd">
+              <div class="settings-logo" style="background:#1565c0;color:#fff">GF</div>
+              <div>
+                <strong>Grafana (百度)</strong>
+                <span>百度环境 Grafana 接入</span>
+              </div>
+              <div class="cred-status" id="cred-status-grafana-baidu"></div>
+            </div>
+            <div class="settings-form">
+              <div class="field">
+                <label>Grafana 地址</label>
+                <input type="text" id="s-grafana-baidu-url" placeholder="https://grafana-baidu.example.com">
+              </div>
+              <div class="field">
+                <label>API Key</label>
+                <input type="password" id="s-grafana-baidu-token" placeholder="Service Account Token 或 API Key">
+              </div>
+              <div class="settings-actions">
+                <button class="btn-ghost" onclick="testCred('grafana-baidu')">测试连接</button>
+                <button class="btn-primary" onclick="saveCred('grafana-baidu')">保存配置</button>
+                <button class="btn-danger" onclick="deleteCred('grafana-baidu')">删除</button>
+              </div>
+            </div>
+          </div>
+          <div class="card mt24" style="max-width:480px">
+            <div class="card-title">使用说明</div>
+            <div class="guide-list">
+              <div class="guide-item"><div class="guide-num">1</div><div>在 Grafana「Configuration → Service Accounts」中创建 Service Account 并生成 Token</div></div>
+              <div class="guide-item"><div class="guide-num">2</div><div>创建平台账号时勾选 Grafana (百度)，系统将记录申请信息，需手动在 Grafana 控制台创建用户</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SSO 单点登录配置 Tab ── -->
+        <div id="itab-sso" class="hidden">
+          <div class="settings-card" style="max-width:640px">
+            <div class="settings-platform-header" style="background:#e8f5e9">
+              <div class="settings-logo" style="background:#2e7d32;color:#fff">SSO</div>
+              <div>
+                <strong>OAuth2 单点登录</strong>
+                <span>管理接入云管平台 SSO 的客户端应用</span>
+              </div>
+            </div>
+            <div style="padding:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div style="font-weight:600;font-size:14px">已注册的 OAuth Client</div>
+                <button class="btn-primary" style="font-size:12px" onclick="showCreateOAuthClient()">+ 新建 Client</button>
+              </div>
+              <div id="oauth-clients-list">加载中...</div>
+            </div>
+          </div>
+          <div class="card mt24" style="max-width:640px">
+            <div class="card-title">接入指南</div>
+            <div class="guide-list">
+              <div class="guide-item"><div class="guide-num">1</div><div>创建 OAuth Client，获取 Client ID 和 Client Secret</div></div>
+              <div class="guide-item"><div class="guide-num">2</div><div>在目标系统（JumpServer / Grafana）配置 OAuth2 认证：<br>
+                <code style="font-size:11px;background:var(--g100);padding:2px 6px;border-radius:3px">Authorization URL: {当前平台地址}/oauth/authorize</code><br>
+                <code style="font-size:11px;background:var(--g100);padding:2px 6px;border-radius:3px">Token URL: {当前平台地址}/oauth/token</code><br>
+                <code style="font-size:11px;background:var(--g100);padding:2px 6px;border-radius:3px">Userinfo URL: {当前平台地址}/oauth/userinfo</code>
+              </div></div>
+              <div class="guide-item"><div class="guide-num">3</div><div>用户在「我的资源」页面点击"一键登录"即可免密进入目标系统</div></div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- 申请项配置 -->
+      <section id="sec-apply-config" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>申请项配置</h2><p class="sub">控制「工单申请」中账号申请（云账号 / VPN 账号 / 平台工具账号）、资源申请的资源类型是否对用户展示</p></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-primary" onclick="saveApplyConfig()">保存配置</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">账号申请</div>
+          <div style="font-size:12.5px;color:var(--g500);margin-bottom:16px">关闭后，用户在「账号申请」页对应分类下将看不到该平台</div>
+
+          <div style="margin-bottom:18px">
+            <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:8px">云账号</div>
+            <div id="ac-cloud-switches"></div>
+          </div>
+          <div style="margin-bottom:18px">
+            <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:8px">VPN 账号</div>
+            <div id="ac-vpn-switches"></div>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:8px">平台工具账号</div>
+            <div id="ac-tool-switches"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">资源申请 — 资源类型</div>
+          <div style="font-size:12.5px;color:var(--g500);margin-bottom:14px">关闭后，用户在「资源申请」页对应云平台下将看不到该资源类型</div>
+          <div id="ac-resource-switches"></div>
+        </div>
+        <div class="card">
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">功能入口</div>
+          <div style="font-size:12.5px;color:var(--g500);margin-bottom:14px">关闭后，该功能的菜单项对所有人隐藏（含管理员），且无法通过链接直接访问</div>
+          <div id="ac-feature-switches"></div>
+        </div>
+      </section>
+
+      <!-- 操作审计（仅管理员） -->
+      <section id="sec-audit" class="sec hidden">
+        <div class="sec-header">
+          <div>
+            <h2>操作审计</h2>
+            <p class="sub">记录所有写操作（新增 / 修改 / 删除）与登录事件，密码及云密钥已脱敏。<span id="audit-stats" style="color:var(--g400)"></span></p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost" onclick="loadAudit()">↻ 刷新</button>
+          </div>
+        </div>
+
+        <div class="sync-toolbar">
+          <div class="sync-filter-tabs" style="gap:14px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font-size:12px;color:var(--g400)">结果</span>
+              <button class="filter-tab active" data-auditresult="all" onclick="setAuditSuccess('',this)">全部</button>
+              <button class="filter-tab" data-auditresult="ok"   onclick="setAuditSuccess('1',this)">成功</button>
+              <button class="filter-tab" data-auditresult="fail" onclick="setAuditSuccess('0',this)">失败</button>
+            </div>
+            <select id="audit-user" onchange="onAuditFilterChange()" style="height:32px;padding:0 8px;border:1px solid var(--g200);border-radius:6px;font-size:12.5px;max-width:180px">
+              <option value="">全部操作人</option>
+            </select>
+            <select id="audit-module" onchange="onAuditFilterChange()" style="height:32px;padding:0 8px;border:1px solid var(--g200);border-radius:6px;font-size:12.5px">
+              <option value="">全部模块</option>
+            </select>
+            <select id="audit-method" onchange="onAuditFilterChange()" style="height:32px;padding:0 8px;border:1px solid var(--g200);border-radius:6px;font-size:12.5px">
+              <option value="">全部方法</option>
+              <option value="POST">POST（新增）</option>
+              <option value="PUT">PUT（修改）</option>
+              <option value="PATCH">PATCH（修改）</option>
+              <option value="DELETE">DELETE（删除）</option>
+            </select>
+            <div style="display:flex;gap:5px;align-items:center">
+              <input type="date" id="audit-start" onchange="onAuditFilterChange()" style="height:32px;padding:0 8px;border:1px solid var(--g200);border-radius:6px;font-size:12.5px">
+              <span style="font-size:12px;color:var(--g400)">至</span>
+              <input type="date" id="audit-end" onchange="onAuditFilterChange()" style="height:32px;padding:0 8px;border:1px solid var(--g200);border-radius:6px;font-size:12.5px">
+            </div>
+            <button class="btn-ghost" style="padding:5px 12px;font-size:12px" onclick="resetAuditFilters()">重置</button>
+          </div>
+          <div class="sync-search">
+            <input type="text" id="audit-keyword" placeholder="搜索操作 / 路径 / 操作人..." oninput="onAuditFilterChange()">
+          </div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="audit-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- 工单申请：提交申请 -->
+      <section id="sec-apply-account" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>账号申请</h2><p class="sub">申请云账号、平台工具账号，或重置已有账号密码，由管理员审批后执行</p></div>
+        </div>
+
+        <!-- 申请人信息（从账号资料读取） -->
+        <div class="card" id="at-profile-card" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-weight:700;font-size:14px">申请人信息</div>
+          </div>
+          <div id="at-profile-info"><!-- JS 填充 --></div>
+        </div>
+
+        <!-- 初始密码（仅云账号 / 平台工具申请时需要，密码重置 Tab 隐藏） -->
+        <div class="card" id="at-initial-password-card" style="margin-bottom:16px">
+          <div class="form-row">
+            <div class="field" style="flex:1">
+              <label>初始密码 <span style="color:var(--g400);font-weight:normal;font-size:11.5px">审批通过后新账号的登录密码，将通过飞书私信发送给你</span></label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="text" id="at-initial-password" placeholder="至少8位，包含大小写字母和数字" style="flex:1;font-family:monospace">
+                <button type="button" class="btn-ghost" onclick="atGeneratePassword()" style="white-space:nowrap;flex-shrink:0;font-size:12px">随机生成</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 栏 -->
+        <div style="display:flex;gap:0;margin-bottom:0;border-bottom:2px solid var(--border);margin-bottom:-2px;position:relative;z-index:1">
+          <button id="at-tab-btn-cloud" onclick="atSwitchTab('cloud')"
+            style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);color:var(--primary);margin-bottom:-2px">
+            云账号申请
+          </button>
+          <button id="at-tab-btn-vpn" onclick="atSwitchTab('vpn')"
+            style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--g500);margin-bottom:-2px">
+            VPN 申请
+          </button>
+          <button id="at-tab-btn-system" onclick="atSwitchTab('system')"
+            style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--g500);margin-bottom:-2px">
+            平台工具申请
+          </button>
+          <button id="at-tab-btn-reset" onclick="atSwitchTab('reset')"
+            style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--g500);margin-bottom:-2px">
+            密码重置
+          </button>
+        </div>
+
+        <!-- Tab1：云资源申请（AWS / 阿里云 / 百度云） -->
+        <div id="at-panel-cloud" class="card" style="margin-bottom:16px;padding:16px;border-top-left-radius:0">
+          <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">选择云平台</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <label id="at-opt-aws" onclick="atOnPlatformOptClick(event,'aws')" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent">
+              <input type="checkbox" id="at-chk-aws" value="aws" onchange="atOnPlatformChange(this.value)" style="flex-shrink:0;margin-top:3px">
+              <div class="platform-logo-sm aws-bg" style="width:36px;height:36px;font-size:10px;flex-shrink:0;border-radius:6px">AWS</div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">AWS IAM 账号</div>
+                <div style="font-size:12.5px;color:var(--g500);line-height:1.5">创建 IAM 子账号及访问密钥</div>
+                <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-aws"></div>
+              </div>
+            </label>
+            <label id="at-opt-aliyun" onclick="atOnPlatformOptClick(event,'aliyun')" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent">
+              <input type="checkbox" id="at-chk-aliyun" value="aliyun" onchange="atOnPlatformChange(this.value)" style="flex-shrink:0;margin-top:3px">
+              <div class="platform-logo-sm ali-bg" style="width:36px;height:36px;font-size:10px;flex-shrink:0;border-radius:6px">阿里云</div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">阿里云 RAM 账号</div>
+                <div style="font-size:12.5px;color:var(--g500);line-height:1.5">创建 RAM 子账号</div>
+                <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-aliyun"></div>
+              </div>
+            </label>
+            <label id="at-opt-baidu" onclick="atOnPlatformOptClick(event,'baidu')" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent">
+              <input type="checkbox" id="at-chk-baidu" value="baidu" onchange="atOnPlatformChange(this.value)" style="flex-shrink:0;margin-top:3px">
+              <div class="platform-logo-sm bai-bg" style="width:36px;height:36px;font-size:10px;flex-shrink:0;border-radius:6px">百度云</div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">百度云 IAM 账号</div>
+                <div style="font-size:12.5px;color:var(--g500);line-height:1.5">创建 IAM 子账号</div>
+                <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-baidu"></div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Tab：VPN 申请（阿里云 / 百度云） -->
+        <div id="at-panel-vpn" class="card hidden" style="margin-bottom:16px;padding:16px;border-top-left-radius:0">
+          <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">选择云平台</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <label id="at-vpn-opt-aliyun" onclick="atVpnOptClick(event,'aliyun')" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent">
+              <input type="checkbox" id="at-vpn-chk-aliyun" value="aliyun" style="flex-shrink:0;margin-top:3px">
+              <div class="platform-logo-sm ali-bg" style="width:36px;height:36px;font-size:10px;flex-shrink:0;border-radius:6px">阿里云</div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">阿里云 VPN</div>
+                <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请阿里云 SSL VPN 客户端账号，用于安全接入内网</div>
+                <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-vpn-badge-aliyun"></div>
+              </div>
+            </label>
+            <label id="at-vpn-opt-baidu" onclick="atVpnOptClick(event,'baidu')" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent">
+              <input type="checkbox" id="at-vpn-chk-baidu" value="baidu" style="flex-shrink:0;margin-top:3px">
+              <div class="platform-logo-sm bai-bg" style="width:36px;height:36px;font-size:10px;flex-shrink:0;border-radius:6px">百度云</div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">百度云 VPN</div>
+                <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请百度云 SSL VPN 客户端账号，用于安全接入内网</div>
+                <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-vpn-badge-baidu"></div>
+              </div>
+            </label>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;color:var(--g600);font-size:13px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+            <span style="font-size:18px;line-height:1.2">🔒</span>
+            <div style="color:var(--g500);line-height:1.6">勾选后即可提交申请，无需填写其他信息。<br>管理员审批通过后，将为您分配 VPN 服务器并创建客户端账号。</div>
+          </div>
+        </div>
+
+        <!-- Tab2：平台工具申请（主机 / 数据库 / 集群 / 监控） -->
+        <div id="at-panel-system" class="card hidden" style="margin-bottom:16px;padding:16px;border-top-left-radius:0">
+
+          <!-- 主机 -->
+          <div id="at-sysgroup-host" style="margin-bottom:20px">
+            <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">主机</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <label id="at-opt-jumpserver" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'jumpserver')">
+                <input type="checkbox" id="at-chk-jumpserver" value="jumpserver" style="flex-shrink:0;margin-top:3px">
+                <div style="width:36px;height:36px;background:#e65c00;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">JS</div>
+                <div style="flex:1">
+                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">JumpServer 堡垒机</div>
+                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请堡垒机账号，用于安全登录内网服务器</div>
+                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-jumpserver"></div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 数据库 -->
+          <div id="at-sysgroup-db" style="margin-bottom:20px">
+            <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">数据库</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <label id="at-opt-bytebase" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'bytebase')">
+                <input type="checkbox" id="at-chk-bytebase" value="bytebase" style="flex-shrink:0;margin-top:3px">
+                <div style="width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0" class="bb-bg">BB</div>
+                <div style="flex:1">
+                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Bytebase</div>
+                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请 Bytebase 账号，用于数据库变更管理与审计</div>
+                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-bytebase"></div>
+                  <div id="at-bb-instance-wrap" class="hidden" style="margin-top:10px" onclick="event.stopPropagation()">
+                    <label style="font-size:12px;color:var(--g600);display:block;margin-bottom:4px">选择 Bytebase 实例</label>
+                    <select id="at-bb-instance" style="width:100%;max-width:320px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+                      <option value="">加载中...</option>
+                    </select>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 集群 -->
+          <div id="at-sysgroup-cluster" style="margin-bottom:20px">
+            <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">集群</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <label id="at-opt-kuboard" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'kuboard')">
+                <input type="checkbox" id="at-chk-kuboard" value="kuboard" style="flex-shrink:0;margin-top:3px">
+                <div style="width:36px;height:36px;background:#0052cc;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">KB</div>
+                <div style="flex:1">
+                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Kuboard 容器管理</div>
+                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请 Kuboard 账号，用于 Kubernetes 集群可视化管理</div>
+                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-kuboard"></div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 监控 -->
+          <div id="at-sysgroup-monitor">
+            <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">监控</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <label id="at-opt-grafana-aws" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'grafana-aws')">
+                <input type="checkbox" id="at-chk-grafana-aws" value="grafana-aws" style="flex-shrink:0;margin-top:3px">
+                <div style="width:36px;height:36px;background:#ff6f00;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">GF</div>
+                <div style="flex:1">
+                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Grafana (AWS)</div>
+                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请 AWS 环境 Grafana 账号，用于查看监控仪表盘</div>
+                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-grafana-aws"></div>
+                </div>
+              </label>
+              <label id="at-opt-grafana-wuwen" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'grafana-wuwen')">
+                <input type="checkbox" id="at-chk-grafana-wuwen" value="grafana-wuwen" style="flex-shrink:0;margin-top:3px">
+                <div style="width:36px;height:36px;background:#2e7d32;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">GF</div>
+                <div style="flex:1">
+                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Grafana (无问)</div>
+                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请无问环境 Grafana 账号，用于查看监控仪表盘</div>
+                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-grafana-wuwen"></div>
+                </div>
+              </label>
+              <label id="at-opt-grafana-baidu" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'grafana-baidu')">
+                <input type="checkbox" id="at-chk-grafana-baidu" value="grafana-baidu" style="flex-shrink:0;margin-top:3px">
+                <div style="width:36px;height:36px;background:#1565c0;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">GF</div>
+                <div style="flex:1">
+                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Grafana (百度)</div>
+                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请百度云环境 Grafana 账号，用于查看监控仪表盘</div>
+                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-grafana-baidu"></div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Tab3：密码重置 -->
+        <div id="at-panel-reset" class="card hidden" style="margin-bottom:16px;padding:20px;border-top-left-radius:0">
+
+          <!-- 账号类型选择 -->
+          <div style="margin-bottom:20px">
+            <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">选择账号类型</div>
+            <div style="display:flex;gap:10px">
+              <div id="at-reset-card-cloud" onclick="atResetTypeChange('cloud')"
+                style="flex:1;display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;user-select:none">
+                <div style="width:38px;height:38px;background:#2563eb;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">IAM</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:var(--g900)">云账号</div>
+                  <div style="font-size:12px;color:var(--g500);margin-top:2px">AWS / 阿里云 / 百度云</div>
+                </div>
+              </div>
+              <div id="at-reset-card-vpn" onclick="atResetTypeChange('vpn')"
+                style="flex:1;display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;user-select:none">
+                <div style="width:38px;height:38px;background:#0891b2;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">VPN</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:var(--g900)">VPN 账号</div>
+                  <div style="font-size:12px;color:var(--g500);margin-top:2px">VPN 客户端登录密码</div>
+                </div>
+              </div>
+              <div id="at-reset-card-system" onclick="atResetTypeChange('system')"
+                style="flex:1;display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;user-select:none">
+                <div style="width:38px;height:38px;background:#7c3aed;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">SYS</div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:var(--g900)">平台工具</div>
+                  <div style="font-size:12px;color:var(--g500);margin-top:2px">JumpServer / Bytebase / Grafana</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 云账号重置表单 -->
+          <div id="at-reset-cloud-form" class="hidden">
+            <div class="form-row">
+              <div class="field">
+                <label>云平台 <span class="req">*</span></label>
+                <select id="at-reset-cloud-platform">
+                  <option value="">请选择</option>
+                  <option value="aws">AWS</option>
+                  <option value="aliyun">阿里云</option>
+                  <option value="baidu">百度云</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>账号名称 <span class="req">*</span></label>
+                <input type="text" id="at-reset-cloud-account" placeholder="将自动填充您的云账号名" readonly style="background:var(--g50);cursor:not-allowed">
+              </div>
+            </div>
+          </div>
+
+          <!-- VPN 账号重置表单 -->
+          <div id="at-reset-vpn-form" class="hidden">
+            <div class="form-row">
+              <div class="field">
+                <label>云平台 <span class="req">*</span></label>
+                <select id="at-reset-vpn-platform" onchange="loadVpnClientsForReset()">
+                  <option value="">请选择</option>
+                  <option value="baidu">百度云</option>
+                </select>
+                <div style="font-size:11px;color:var(--g500);margin-top:4px">注：AWS 和阿里云 VPN 基于证书认证，不支持密码重置</div>
+              </div>
+              <div class="field">
+                <label>VPN 客户端 <span class="req">*</span></label>
+                <select id="at-reset-vpn-client">
+                  <option value="">先选择云平台</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 平台工具重置表单 -->
+          <div id="at-reset-system-form" class="hidden">
+            <div class="field">
+              <label>平台工具 <span class="req">*</span></label>
+              <select id="at-reset-system-tool">
+                <option value="">请选择</option>
+                <option value="jumpserver">JumpServer 堡垒机</option>
+                <option value="bytebase">Bytebase 数据库管理</option>
+                <option value="kuboard">Kuboard 容器管理</option>
+                <option value="grafana-aws">Grafana (AWS)</option>
+                <option value="grafana-wuwen">Grafana (无问)</option>
+                <option value="grafana-baidu">Grafana (百度)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 新密码 -->
+          <div class="form-row" style="margin-top:16px">
+            <div class="field" style="flex:1">
+              <label>新密码 <span class="req">*</span> <span style="color:var(--g400);font-weight:normal;font-size:11.5px">至少8位，包含大小写字母和数字</span></label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="text" id="at-reset-password" placeholder="请输入新密码" style="flex:1;font-family:monospace">
+                <button type="button" class="btn-ghost" onclick="atResetGeneratePassword()" style="white-space:nowrap;flex-shrink:0;font-size:12px">随机生成</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 重置原因 -->
+          <div class="field" style="margin-top:16px">
+            <label>重置原因 <span class="req">*</span></label>
+            <select id="at-reset-reason-select" onchange="onResetReasonChange()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:white">
+              <option value="">请选择重置原因</option>
+              <option value="忘记密码">忘记密码</option>
+              <option value="密码泄露">密码泄露</option>
+              <option value="定期更换">定期更换</option>
+              <option value="other">其他原因</option>
+            </select>
+            <textarea id="at-reset-reason" placeholder="请输入具体原因" rows="2" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;margin-top:8px;display:none"></textarea>
+          </div>
+
+        </div>
+
+
+        <!-- 账号用途备注（各平台）：选中平台后显示 -->
+        <div id="at-iam-notes-area" class="card hidden" style="margin-bottom:16px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:12px">账号用途备注</div>
+          <div id="at-iam-notes-rows"><!-- JS 动态生成 --></div>
+        </div>
+
+        <p id="at-err" class="err-text"></p>
+        <div id="at-result" class="hidden"></div>
+        <div id="at-workflow-select" class="hidden"></div>
+        <div style="margin-top:12px" id="at-submit-row">
+          <button class="btn-primary" onclick="submitApplyAccount()" id="at-btn-submit">提交申请</button>
+        </div>
+      </section>
+
+      <!-- 资源申请 -->
+      <section id="sec-apply-resource" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>资源申请</h2><p class="sub">申请云存储、云主机、数据库、DNS 等资源，由管理员审批后分配</p></div>
+        </div>
+
+        <!-- 备注 -->
+
+        <!-- Tab 导航：AWS / 阿里云 / 百度云 -->
+        <div style="display:flex;gap:0;margin-bottom:0;border-bottom:2px solid var(--border);position:relative;z-index:1">
+          <button id="ar-tab-btn-aws" onclick="arSwitchTab('aws')"
+            style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);color:var(--primary);margin-bottom:-2px">
+            AWS
+          </button>
+          <button id="ar-tab-btn-aliyun" onclick="arSwitchTab('aliyun')"
+            style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--g500);margin-bottom:-2px">
+            阿里云
+          </button>
+          <button id="ar-tab-btn-baidu" onclick="arSwitchTab('baidu')"
+            style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--g500);margin-bottom:-2px">
+            百度云
+          </button>
+        </div>
+
+        <!-- Tab 面板（JS 动态渲染） -->
+        <div id="ar-panel-aws" class="card" style="margin-bottom:16px;padding:16px;border-top-left-radius:0"></div>
+        <div id="ar-panel-aliyun" class="card hidden" style="margin-bottom:16px;padding:16px;border-top-left-radius:0"></div>
+        <div id="ar-panel-baidu" class="card hidden" style="margin-bottom:16px;padding:16px;border-top-left-radius:0"></div>
+
+        <p id="ar-err" class="err-text"></p>
+        <div id="ar-result" class="hidden"></div>
+        <div id="ar-workflow-select" class="hidden"></div>
+        <div style="margin-top:12px" id="ar-submit-row">
+          <button class="btn-primary" onclick="submitResourceApply()" id="ar-btn-submit">提交申请</button>
+        </div>
+      </section>
+
+      <!-- 我的申请记录 -->
+      <section id="sec-my-tickets" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>申请记录</h2><p class="sub">查看我提交的资源申请工单</p></div>
+        </div>
+        <div class="filter-bar">
+          <button class="filter-tab active" onclick="setMyTicketFilter('all',this)">全部</button>
+          <button class="filter-tab" onclick="setMyTicketFilter('pending',this)">待审批</button>
+          <button class="filter-tab" onclick="setMyTicketFilter('approved',this)">待授权</button>
+          <button class="filter-tab" onclick="setMyTicketFilter('completed',this)">已完成</button>
+          <button class="filter-tab" onclick="setMyTicketFilter('failed',this)">失败</button>
+          <button class="filter-tab" onclick="setMyTicketFilter('rejected',this)">已拒绝</button>
+          <button class="filter-tab" onclick="setMyTicketFilter('cancelled',this)">已撤销</button>
+        </div>
+        <div id="my-tickets-loading" class="sync-loading hidden"><div class="spin"></div> 加载中...</div>
+        <div id="my-tickets-wrap"></div>
+      </section>
+
+      <!-- 审批工单列表 -->
+      <section id="sec-approval-tickets" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>申请记录</h2><p class="sub">查看资源申请工单；管理员可查看所有工单并分配权限</p></div>
+        </div>
+        <div class="filter-bar" style="flex-wrap:wrap;gap:8px">
+          <button class="filter-tab active" onclick="setTicketFilter('all',this)">全部</button>
+          <button class="filter-tab" onclick="setTicketFilter('pending,approved',this)">待处理</button>
+          <button class="filter-tab" onclick="setTicketFilter('pending',this)">待审批</button>
+          <button class="filter-tab" onclick="setTicketFilter('approved',this)">待授权</button>
+          <button class="filter-tab" onclick="setTicketFilter('completed',this)">已完成</button>
+          <button class="filter-tab" onclick="setTicketFilter('failed',this)">失败</button>
+          <button class="filter-tab" onclick="setTicketFilter('rejected',this)">已拒绝</button>
+          <button class="filter-tab" onclick="setTicketFilter('cancelled',this)">已撤销</button>
+          <input id="ticket-user-filter" type="text" placeholder="按账号名称筛选…"
+            style="margin-left:auto;padding:4px 10px;border:1px solid var(--g200);border-radius:6px;font-size:13px;width:160px;outline:none"
+            oninput="setTicketUserFilter(this.value)">
+        </div>
+        <div id="tickets-loading" class="sync-loading hidden"><div class="spin"></div> 加载中...</div>
+        <div id="tickets-wrap"></div>
+      </section>
+
+      <!-- 建议反馈 -->
+      <section id="sec-feedback" class="sec hidden">
+        <div class="sec-header">
+          <div><h2>建议反馈</h2><p class="sub">提交平台改进建议或问题反馈，帮助我们做得更好</p></div>
+        </div>
+        <div id="feedback-form-area"></div>
+        <div id="feedback-loading" class="sync-loading hidden"><div class="spin"></div> 加载中...</div>
+        <div id="feedback-list"></div>
+      </section>
+
+      <!-- 飞书集成配置 -->
+    </main>
+  </div>
+
+  <!-- 组成员弹窗 -->
+  <div id="modal-group-members" class="modal-overlay hidden" onclick="closeGroupMembersModal()">
+    <div class="modal" style="width:420px;max-width:95vw" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="gm-title">组成员</h3>
+        <button class="modal-close" onclick="closeGroupMembersModal()">✕</button>
+      </div>
+      <div id="gm-body" style="max-height:400px;overflow-y:auto;padding:4px 0"></div>
+    </div>
+  </div>
+
+  <!-- 工单结果查看弹窗 -->
+  <div id="modal-ticket-result" class="modal-overlay hidden" onclick="closeTicketResultModal()">
+    <div class="modal" style="width:620px;max-width:95vw;padding:0" onclick="event.stopPropagation()">
+      <div class="modal-header" style="padding:16px 24px">
+        <h3>工单结果</h3>
+        <button class="modal-close" onclick="closeTicketResultModal()">✕</button>
+      </div>
+      <div id="tr-body" style="padding:20px 24px;max-height:70vh;overflow-y:auto"></div>
+      <div style="padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+        <button class="btn-ghost" onclick="closeTicketResultModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 工单分配权限并批准弹窗 -->
+  <div id="modal-ticket-approve" class="modal-overlay hidden" onclick="closeApproveModal()">
+    <div class="modal" style="width:720px;max-width:95vw;display:flex;flex-direction:column;max-height:90vh" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>分配权限并批准</h3>
+        <button class="modal-close" onclick="closeApproveModal()">✕</button>
+      </div>
+      <div id="ta-body" style="flex:1;overflow-y:auto;padding:20px 24px"></div>
+      <div style="padding:14px 24px;border-top:1px solid var(--border)">
+        <!-- 拒绝理由输入区（默认隐藏） -->
+        <div id="ta-reject-panel" class="hidden" style="margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:6px">
+            拒绝理由 <span style="font-weight:400;color:var(--g400);font-size:12px">（将显示给申请人，必填）</span>
+          </div>
+          <textarea id="ta-reject-reason" rows="2" placeholder="请说明拒绝原因，如：账号已存在、信息填写有误…"
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:none;box-sizing:border-box"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+            <button class="btn-ghost" onclick="cancelRejectPanel()">取消</button>
+            <button class="btn-danger" onclick="confirmRejectTicket()">确认拒绝</button>
+          </div>
+        </div>
+        <!-- 常规操作行 -->
+        <div id="ta-action-row" style="display:flex;gap:10px;align-items:center">
+          <button class="btn-ghost" onclick="closeApproveModal()">取消</button>
+          <button class="btn-danger" onclick="showRejectPanel()">拒绝申请</button>
+          <div style="flex:1"></div>
+          <span id="ta-err" class="err-text" style="margin:0"></span>
+          <button class="btn-primary" onclick="submitTicketApproval()" id="ta-btn-submit">确认授权</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 创建用户组弹窗 -->
+  <div id="modal-group-create" class="modal-overlay hidden" onclick="closeGroupCreateModal()">
+    <div class="modal" style="width:480px;max-width:95vw" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>创建用户组</h3>
+        <button class="modal-close" onclick="closeGroupCreateModal()">✕</button>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+        <div class="field">
+          <label>组名 <span class="req">*</span></label>
+          <input type="text" id="gc-name" placeholder="只能包含字母、数字、连字符">
+        </div>
+        <div class="field">
+          <label>显示名</label>
+          <input type="text" id="gc-display" placeholder="可选，默认同组名">
+        </div>
+        <div class="field">
+          <label>描述</label>
+          <input type="text" id="gc-desc" placeholder="可选">
+        </div>
+        <div class="field">
+          <label>创建到以下云平台 <span class="req">*</span></label>
+          <div style="display:flex;gap:16px;margin-top:6px">
+            <label class="perm-check-item"><input type="checkbox" id="gc-aws" value="aws"> AWS</label>
+            <label class="perm-check-item"><input type="checkbox" id="gc-aliyun" value="aliyun"> 阿里云</label>
+            <label class="perm-check-item"><input type="checkbox" id="gc-baidu" value="baidu"> 百度云</label>
+          </div>
+        </div>
+        <div id="gc-err" class="err-text"></div>
+        <button class="btn-primary w-full" onclick="submitGroupCreate()">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 创建云主机弹窗 -->
+  <div id="modal-create-inst" class="modal-overlay hidden" onclick="closeCreateInstModal()">
+    <div class="modal inst-modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>创建云主机</h3>
+        <button class="modal-close" onclick="closeCreateInstModal()">✕</button>
+      </div>
+
+      <!-- 云平台选择 Tab -->
+      <div class="inst-tabs">
+        <button class="inst-tab active" data-p="aws"    onclick="switchInstPlatform('aws',this)">
+          <span class="inst-tab-logo aws-bg">AWS</span>Amazon Web Services
+        </button>
+        <button class="inst-tab" data-p="aliyun" onclick="switchInstPlatform('aliyun',this)">
+          <span class="inst-tab-logo ali-bg">阿里</span>阿里云 ECS
+        </button>
+        <button class="inst-tab" data-p="baidu"  onclick="switchInstPlatform('baidu',this)">
+          <span class="inst-tab-logo bai-bg">百度</span>百度智能云 BCC
+        </button>
+      </div>
+
+      <!-- 公共字段 -->
+      <div class="inst-form">
+        <div class="form-row">
+          <div class="field">
+            <label>实例名称</label>
+            <input type="text" id="ci-name" placeholder="如：web-server-01">
+          </div>
+          <div class="field">
+            <label>创建数量</label>
+            <input type="number" id="ci-count" value="1" min="1" max="10">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>地域 <span class="req">*</span></label>
+            <select id="ci-region" onchange="onInstRegionChange()"></select>
+          </div>
+          <div class="field">
+            <label>可用区</label>
+            <select id="ci-zone"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>实例规格 <span class="req">*</span></label>
+          <div class="form-row" style="gap:10px;margin-bottom:6px">
+            <select id="ci-cpu-filter" onchange="_renderInstTypesFiltered()" style="flex:1"><option value="0">CPU 不限</option></select>
+            <select id="ci-mem-filter" onchange="_renderInstTypesFiltered()" style="flex:1"><option value="0">内存不限</option></select>
+          </div>
+          <input type="text" id="ci-type-search" placeholder="按规格名搜索，如 t3 / m7g / large..." oninput="_renderInstTypesFiltered()" style="width:100%;margin-bottom:6px">
+          <select id="ci-type" onchange="onInstTypeChange()"></select>
+          <div id="ci-type-price" class="field-hint"></div>
+        </div>
+        <div class="field">
+          <label>镜像 <span class="req">*</span></label>
+          <select id="ci-os-filter" onchange="_renderImagesFiltered()" style="width:100%;margin-bottom:6px">
+            <option value="">全部操作系统</option>
+            <option value="ubuntu">Ubuntu</option>
+            <option value="centos">CentOS</option>
+            <option value="debian">Debian</option>
+            <option value="amazon">Amazon Linux</option>
+            <option value="windows">Windows</option>
+          </select>
+          <select id="ci-image"><option value="">请先选择地域</option></select>
+          <div id="ci-image-hint" class="field-hint"></div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>系统盘大小 (GiB)</label>
+            <input type="number" id="ci-sysdisk" value="40" min="20" max="500">
+          </div>
+          <div class="field">
+            <label>数据盘大小 (GiB)</label>
+            <input type="number" id="ci-datadisk" value="0" min="0" max="2000">
+          </div>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal">
+            <input type="checkbox" id="ci-pubip" style="width:auto;flex-shrink:0;margin:0">
+            <span>分配公网 IP（默认仅内网访问，勾选后可从公网访问，可能产生带宽/EIP 费用）</span>
+          </label>
+        </div>
+
+        <!-- AWS 专属字段 -->
+        <div id="ci-extra-aws" class="inst-extra">
+          <div class="form-row">
+            <div class="field">
+              <label>密钥对（可选）</label>
+              <input type="text" id="ci-key-pair" placeholder="如：my-key-pair">
+            </div>
+            <div class="field">
+              <label>VPC（可选）</label>
+              <div class="sg-select-wrap">
+                <select id="ci-aws-vpc" onchange="_onVpcChange('aws')"><option value="">不指定</option></select>
+                <button class="btn-ghost sg-sync-btn" onclick="syncAndFillVpc('aws')">同步</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>子网（可选）</label>
+              <div class="sg-select-wrap">
+                <select id="ci-aws-subnet"><option value="">不指定</option></select>
+                <button class="btn-ghost sg-sync-btn" onclick="syncAndFillSubnets('aws')">同步</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>安全组（可选）</label>
+              <div class="sg-select-wrap">
+                <select id="ci-aws-sg"><option value="">不指定</option></select>
+                <button class="btn-ghost sg-sync-btn" onclick="syncAndFillSG('aws')">同步</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 阿里云专属字段 -->
+        <div id="ci-extra-aliyun" class="inst-extra hidden">
+          <div class="form-row">
+            <div class="field">
+              <label>VPC（可选）</label>
+              <div class="sg-select-wrap">
+                <select id="ci-ali-vpc" onchange="_onVpcChange('aliyun')"><option value="">不指定</option></select>
+                <button class="btn-ghost sg-sync-btn" onclick="syncAndFillVpc('aliyun')">同步</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>交换机（可选）</label>
+              <div class="sg-select-wrap">
+                <select id="ci-ali-vsw"><option value="">不指定</option></select>
+                <button class="btn-ghost sg-sync-btn" onclick="syncAndFillSubnets('aliyun')">同步</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>安全组（可选）</label>
+              <div class="sg-select-wrap">
+                <select id="ci-ali-sg"><option value="">不指定</option></select>
+                <button class="btn-ghost sg-sync-btn" onclick="syncAndFillSG('aliyun')">同步</button>
+              </div>
+            </div>
+            <div class="field"></div>
+          </div>
+        </div>
+
+        <!-- 百度云专属字段 -->
+        <div id="ci-extra-baidu" class="inst-extra hidden">
+          <div class="form-row">
+            <div class="field">
+              <label>VPC（可选）</label>
+              <div class="sg-select-wrap">
+                <select id="ci-bai-vpc" onchange="_onVpcChange('baidu')"><option value="">不指定</option></select>
+                <button class="btn-ghost sg-sync-btn" onclick="syncAndFillVpc('baidu')">同步</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>子网（可选）</label>
+              <div class="sg-select-wrap">
+                <select id="ci-bai-subnet"><option value="">不指定</option></select>
+                <button class="btn-ghost sg-sync-btn" onclick="syncAndFillSubnets('baidu')">同步</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>安全组（可选）</label>
+              <div class="sg-select-wrap">
+                <select id="ci-bai-sg"><option value="">不指定</option></select>
+                <button class="btn-ghost sg-sync-btn" onclick="syncAndFillSG('baidu')">同步</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>计费方式</label>
+              <select id="ci-bai-billing">
+                <option value="Postpaid">按需计费（后付费）</option>
+                <option value="Prepaid">包年包月（预付费）</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="ci-err" class="err-text"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn-ghost" onclick="closeCreateInstModal()">取消</button>
+          <button class="btn-primary" id="ci-submit-btn" onclick="submitCreateInstance()">确认创建</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 账号详情弹窗 -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="modal-title">账号详情</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- 创建系统账号弹窗 -->
+  <div id="admin-create-modal" class="modal-overlay hidden" onclick="closeAdminCreateModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:440px">
+      <div class="modal-header">
+        <h3>创建系统账号</h3>
+        <button class="modal-close" onclick="closeAdminCreateModal()">✕</button>
+      </div>
+      <div style="padding:20px 24px">
+        <div class="field">
+          <label>姓名</label>
+          <input type="text" id="adm-name" placeholder="管理员姓名">
+        </div>
+        <div class="field">
+          <label>邮箱</label>
+          <input type="email" id="adm-email" placeholder="admin@example.com">
+        </div>
+        <div class="field">
+          <label>角色</label>
+          <select id="adm-role" onchange="_updateAdmRoleHint(this.value)">
+            <option value="">加载中...</option>
+          </select>
+          <div id="adm-role-hint" style="margin-top:6px;font-size:12px;color:var(--g400)"></div>
+        </div>
+        <div class="field">
+          <label>密码（至少8位，含大小写字母和数字）</label>
+          <input type="password" id="adm-password" placeholder="请输入密码">
+        </div>
+        <div id="adm-create-err" class="err-text"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn-ghost" onclick="closeAdminCreateModal()">取消</button>
+          <button class="btn-primary" onclick="submitAdminCreate()">创建</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bytebase 实例 添加/编辑 弹窗 -->
+  <div id="bytebase-instance-modal" class="modal-overlay hidden" onclick="closeBytebaseInstanceModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:480px">
+      <div class="modal-header">
+        <h3 id="bb-modal-title">添加 Bytebase 实例</h3>
+        <button class="modal-close" onclick="closeBytebaseInstanceModal()">✕</button>
+      </div>
+      <div style="padding:20px 24px">
+        <input type="hidden" id="bb-inst-id">
+        <div class="field">
+          <label>实例名称 <span style="color:var(--danger,#dc2626)">*</span></label>
+          <input type="text" id="bb-inst-name" placeholder="如：生产库 / 测试库">
+        </div>
+        <div class="field">
+          <label>Bytebase 地址 <span style="color:var(--danger,#dc2626)">*</span> <span style="color:var(--g400);font-weight:normal;font-size:11.5px">只填到域名，如 https://bytebase.example.com</span></label>
+          <input type="text" id="bb-inst-url" placeholder="https://bytebase.example.com">
+        </div>
+        <div class="field">
+          <label>服务账号邮箱 <span style="color:var(--danger,#dc2626)">*</span> <span style="color:var(--g400);font-weight:normal;font-size:11.5px">Bytebase 服务账号的 email</span></label>
+          <input type="text" id="bb-inst-email" placeholder="如：cmp-sa@service.bytebase.com">
+        </div>
+        <div class="field">
+          <label>Service Account Key <span id="bb-inst-token-hint" style="color:var(--g400);font-weight:normal;font-size:11.5px"></span></label>
+          <input type="password" id="bb-inst-token" placeholder="bbs_ 开头的服务账号 Key">
+        </div>
+        <div class="field">
+          <label>CF-Access-Client-Id <span style="color:var(--g400);font-weight:normal;font-size:11.5px">（过 Cloudflare 用，可选）</span></label>
+          <input type="text" id="bb-inst-cfid" placeholder="xxx.access">
+        </div>
+        <div class="field">
+          <label>CF-Access-Client-Secret <span id="bb-inst-cfsecret-hint" style="color:var(--g400);font-weight:normal;font-size:11.5px">（可选）</span></label>
+          <input type="password" id="bb-inst-cfsecret" placeholder="Cloudflare Access Client Secret">
+        </div>
+        <div id="bb-inst-err" class="err-text"></div>
+        <div style="display:flex;gap:10px;justify-content:space-between;margin-top:16px">
+          <button class="btn-ghost" onclick="testBytebaseInstance(this)">测试连接</button>
+          <div style="display:flex;gap:10px">
+            <button class="btn-ghost" onclick="closeBytebaseInstanceModal()">取消</button>
+            <button class="btn-primary" onclick="submitBytebaseInstance()">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 修改平台账号密码弹窗 -->
+  <div id="admin-pwd-modal" class="modal-overlay hidden" onclick="closeAdminPwdModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:380px">
+      <div class="modal-header">
+        <h3 id="admin-pwd-title">修改密码</h3>
+        <button class="modal-close" onclick="closeAdminPwdModal()">✕</button>
+      </div>
+      <div style="padding:20px 24px">
+        <div class="field">
+          <label>新密码（至少8位，含大小写字母和数字）</label>
+          <input type="password" id="adm-new-pwd" placeholder="请输入新密码">
+        </div>
+        <div id="adm-pwd-err" class="err-text"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn-ghost" onclick="closeAdminPwdModal()">取消</button>
+          <button class="btn-primary" onclick="submitAdminPwd()">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑系统账号弹窗（邮箱/角色） -->
+  <div id="admin-edit-modal" class="modal-overlay hidden" onclick="closeAdminEditModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:400px">
+      <div class="modal-header">
+        <h3>编辑账号信息</h3>
+        <button class="modal-close" onclick="closeAdminEditModal()">✕</button>
+      </div>
+      <div style="padding:20px 24px">
+        <div class="field">
+          <label>邮箱</label>
+          <input type="email" id="adm-edit-email" placeholder="admin@example.com">
+        </div>
+        <div class="field">
+          <label>角色</label>
+          <select id="adm-edit-role">
+            <option value="">加载中...</option>
+          </select>
+        </div>
+        <div id="adm-edit-err" class="err-text"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn-ghost" onclick="closeAdminEditModal()">取消</button>
+          <button class="btn-primary" onclick="submitAdminEdit()">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 指定飞书登录用户角色弹窗 -->
+  <div id="feishu-role-modal" class="modal-overlay hidden" onclick="closeFeishuRoleModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:400px">
+      <div class="modal-header">
+        <h3 id="feishu-role-title">指定角色</h3>
+        <button class="modal-close" onclick="closeFeishuRoleModal()">✕</button>
+      </div>
+      <div style="padding:20px 24px">
+        <div class="field">
+          <label>角色</label>
+          <select id="feishu-role-select" onchange="_updateFeishuRoleHint(this.value)">
+            <option value="">加载中...</option>
+          </select>
+          <div id="feishu-role-hint" style="font-size:12px;color:var(--g500);margin-top:6px"></div>
+        </div>
+        <div id="feishu-role-err" class="err-text"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn-ghost" onclick="closeFeishuRoleModal()">取消</button>
+          <button class="btn-primary" onclick="submitFeishuRole()">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 创建角色弹窗 -->
+  <div id="role-create-modal" class="modal-overlay hidden" onclick="closeRoleCreateModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:480px">
+      <div class="modal-header">
+        <h3 id="role-modal-title">创建系统角色</h3>
+        <button class="modal-close" onclick="closeRoleCreateModal()">✕</button>
+      </div>
+      <div style="padding:20px 24px">
+        <div class="form-row">
+          <div class="field">
+            <label>角色标识 <span class="req">*</span></label>
+            <input type="text" id="r-name" placeholder="如 readonly_ops（小写字母/数字/下划线）">
+          </div>
+          <div class="field">
+            <label>显示名 <span class="req">*</span></label>
+            <input type="text" id="r-display" placeholder="如 运维只读">
+          </div>
+        </div>
+        <div class="field">
+          <label>描述</label>
+          <input type="text" id="r-desc" placeholder="角色用途说明（可选）">
+        </div>
+        <div class="field">
+          <label>可访问菜单</label>
+          <div class="perm-checks">
+            <label class="perm-check-item"><input type="checkbox" name="r-group" value="compute"> 计算资源</label>
+            <label class="perm-check-item"><input type="checkbox" name="r-group" value="database"> 数据库资源</label>
+            <label class="perm-check-item"><input type="checkbox" name="r-group" value="network"> 网络资源</label>
+            <label class="perm-check-item"><input type="checkbox" name="r-group" value="storage"> 存储资源</label>
+            <label class="perm-check-item"><input type="checkbox" name="r-group" value="billing"> 费用账单</label>
+            <label class="perm-check-item"><input type="checkbox" name="r-group" value="accounts"> 账号资源</label>
+            <label class="perm-check-item"><input type="checkbox" name="r-group" value="system"> 系统设置</label>
+            <label class="perm-check-item"><input type="checkbox" name="r-group" value="tickets"> 工单申请</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>工单提交平台权限</label>
+          <div style="display:flex;gap:16px;margin-top:6px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="radio" name="r-ticket-mode" value="all" checked onchange="toggleTicketPlatformMode()"> 所有平台
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="radio" name="r-ticket-mode" value="specific" onchange="toggleTicketPlatformMode()"> 指定平台
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="radio" name="r-ticket-mode" value="none" onchange="toggleTicketPlatformMode()"> 禁止提交
+            </label>
+          </div>
+          <div id="r-ticket-platforms" class="perm-checks" style="margin-top:8px;display:none">
+            <label class="perm-check-item"><input type="checkbox" name="r-ticket-platform" value="aws"> AWS</label>
+            <label class="perm-check-item"><input type="checkbox" name="r-ticket-platform" value="aliyun"> 阿里云</label>
+            <label class="perm-check-item"><input type="checkbox" name="r-ticket-platform" value="baidu"> 百度云</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="perm-check-item" style="gap:10px">
+            <input type="checkbox" id="r-can-operate">
+            <span>操作权限（允许执行创建、同步、删除等写操作）</span>
+          </label>
+        </div>
+        <div id="role-create-err" class="err-text"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn-ghost" onclick="closeRoleCreateModal()">取消</button>
+          <button class="btn-primary" id="role-submit-btn" onclick="submitRoleForm()">创建</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div><!-- #app -->
+
+  <!-- 创建 VPN 客户端弹窗 -->
+  <div id="modal-vpn-create" class="modal-overlay hidden" onclick="closeVpnCreateModal()">
+    <div class="modal" style="width:460px;max-width:95vw" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>创建 VPN 客户端</h3>
+        <button class="modal-close" onclick="closeVpnCreateModal()">✕</button>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+        <div class="field">
+          <label>云平台 <span class="req">*</span></label>
+          <div style="display:flex;gap:16px;margin-top:6px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="radio" name="vc-platform" value="aliyun" onchange="onVpnPlatformChange()"> 阿里云
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="radio" name="vc-platform" value="baidu" onchange="onVpnPlatformChange()"> 百度云
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label>地域 <span class="req">*</span></label>
+          <select id="vc-region" onchange="onVpnRegionChange()" disabled>
+            <option value="">请先选择云平台</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>SSL VPN 服务器 <span class="req">*</span></label>
+          <select id="vc-server" disabled>
+            <option value="">请先选择云平台</option>
+          </select>
+        </div>
+        <div class="field">
+          <label id="vc-name-label">名称 <span class="req">*</span></label>
+          <input type="text" id="vc-name" placeholder="客户端名称">
+        </div>
+        <div class="field hidden" id="vc-password-wrap">
+          <label>密码 <span class="req">*</span></label>
+          <input type="password" id="vc-password" placeholder="SSL VPN 用户密码">
+        </div>
+        <div class="field">
+          <label>备注</label>
+          <textarea id="vc-notes" rows="2" placeholder="可选，填写用途说明" style="resize:vertical"></textarea>
+        </div>
+        <div id="vc-err" class="err-text"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn-ghost" onclick="closeVpnCreateModal()">取消</button>
+          <button class="btn-primary" id="vc-submit-btn" onclick="submitVpnCreate()">创建</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- 核心层：按依赖顺序加载 -->
+<script src="/js/state.js"></script>
+<script src="/js/http.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/permissions.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/auth.js"></script>
+
+<!-- 业务模块层：按功能分组 -->
+<script src="/js/overview.js"></script>
+<script src="/js/accounts.js"></script>
+<script src="/js/create.js"></script>
+<script src="/js/sync.js"></script>
+<script src="/js/groups.js"></script>
+<script src="/js/network.js"></script>
+<script src="/js/clusters.js"></script>
+<script src="/js/pai.js"></script>
+<script src="/js/jumpserver.js"></script>
+<script src="/js/rds-instances.js"></script>
+<script src="/js/storage.js"></script>
+<script src="/js/buckets.js"></script>
+<script src="/js/cpfs.js"></script>
+<script src="/js/billing.js"></script>
+<script src="/js/vpn.js"></script>
+<script src="/js/admin.js"></script>
+<script src="/js/settings.js"></script>
+<script src="/js/tickets.js"></script>
+<script src="/js/apply-config.js"></script>
+<script src="/js/audit.js"></script>
+<script src="/js/profile.js"></script>
+<script src="/js/perm-query.js"></script>
+<script src="/js/feedback.js"></script>
+
+
+<!-- Bucket 授权弹窗 -->
+<div id="modal-bucket-grant" class="modal-overlay hidden" onclick="closeBucketGrantModal()">
+  <div class="modal" style="width:560px;max-width:95vw;padding:0" onclick="event.stopPropagation()">
+    <div class="modal-header" style="padding:16px 24px">
+      <h3>Bucket 授权策略</h3>
+      <button class="modal-close" onclick="closeBucketGrantModal()">✕</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+      <!-- 平台 + Bucket（只读） -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field">
+          <label>云平台</label>
+          <div id="bg-platform-label" style="padding:6px 10px;background:var(--g50);border:1px solid var(--border);border-radius:6px;font-size:13px;margin-top:6px"></div>
+        </div>
+        <div class="field">
+          <label>Bucket</label>
+          <div id="bg-bucket-label" style="padding:6px 10px;background:var(--g50);border:1px solid var(--border);border-radius:6px;font-size:13px;margin-top:6px;font-family:monospace"></div>
+        </div>
+      </div>
+      <!-- 用户ID（必填） -->
+      <div class="field">
+        <label>用户 ID <span class="req">*</span></label>
+        <select id="bg-local-user" style="margin-top:6px" onchange="onBgLocalUserChange()">
+          <option value="">-- 请选择用户 --</option>
+        </select>
+        <div style="font-size:11.5px;color:var(--g400);margin-top:4px">授权给指定本地平台用户</div>
+      </div>
+      <!-- 路径前缀 -->
+      <div class="field">
+        <label>路径前缀 <span class="req">*</span></label>
+        <input type="text" id="bg-path" value="*" placeholder="如：data/prod/ 或 * 表示全部">
+        <div style="font-size:11.5px;color:var(--g400);margin-top:4px">使用 <code style="background:var(--g100);padding:1px 4px;border-radius:3px">*</code> 表示授权 Bucket 下所有对象；填写路径前缀则仅授权该路径下的对象</div>
+      </div>
+      <!-- 权限类型 -->
+      <div class="field">
+        <label>权限类型 <span class="req">*</span></label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+            <input type="radio" name="bg-perm" value="read" checked onchange="onBgPermChange()" style="margin-top:2px">
+            <div><div style="font-size:13px;font-weight:500">只读（Read-Only）</div><div style="font-size:11.5px;color:var(--g400)">GetObject · HeadObject · ListObjects · GetBucketStat</div></div>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+            <input type="radio" name="bg-perm" value="readwrite" onchange="onBgPermChange()" style="margin-top:2px">
+            <div><div style="font-size:13px;font-weight:500">读写（Read-Write）</div><div style="font-size:11.5px;color:var(--g400)">以上全部 + PutObject · DeleteObject · AbortMultipartUpload</div></div>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+            <input type="radio" name="bg-perm" value="existing" onchange="onBgPermChange()" style="margin-top:2px">
+            <div><div style="font-size:13px;font-weight:500">选择已有策略</div><div style="font-size:11.5px;color:var(--g400)">直接使用云平台上已创建的自定义策略</div></div>
+          </label>
+        </div>
+      </div>
+      <!-- 新建策略名称（只读/读写时显示） -->
+      <div id="bg-new-policy-section" class="field">
+        <label>策略名称 <span class="req">*</span></label>
+        <input type="text" id="bg-policy-name" placeholder="如：s3-my-bucket-read">
+        <div style="font-size:11.5px;color:var(--g400);margin-top:4px">将在云平台创建一条以此命名的自定义 IAM 策略</div>
+      </div>
+      <!-- 选择已有策略（existing 时显示） -->
+      <div id="bg-existing-policy-section" class="field hidden">
+        <label>选择策略 <span class="req">*</span></label>
+        <select id="bg-existing-policy" style="margin-top:6px">
+          <option value="">加载中...</option>
+        </select>
+      </div>
+      <!-- 云子账号（根据选择用户筛选） -->
+      <div class="field">
+        <label>云子账号 <span class="req">*</span></label>
+        <select id="bg-cloud-user" style="margin-top:6px" required>
+          <option value="">-- 请先选择用户 --</option>
+        </select>
+        <div style="font-size:11.5px;color:var(--g400);margin-top:4px">将策略绑定到该云子账号，使其拥有此 Bucket 的访问权限</div>
+      </div>
+      <!-- 已授权用户列表 -->
+      <div id="bg-granted-list-section" class="field">
+        <label>已授权用户</label>
+        <div id="bg-granted-list" style="margin-top:6px;font-size:13px;color:var(--g500)">暂无授权记录</div>
+      </div>
+      <p id="bg-err" class="err-text"></p>
+    </div>
+    <div style="padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+      <button class="btn-ghost" onclick="closeBucketGrantModal()">取消</button>
+      <button class="btn-primary" id="bg-btn-submit" onclick="submitBucketGrant()">创建授权策略</button>
+    </div>
+  </div>
+</div>
+
+<!-- 创建 Bucket 弹窗 -->
+<div id="modal-bucket-create" class="modal-overlay hidden" onclick="closeBucketCreateModal()">
+  <div class="modal" style="width:440px;max-width:95vw" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>创建 Bucket</h3>
+      <button class="modal-close" onclick="closeBucketCreateModal()">✕</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+      <div class="field">
+        <label>云平台 <span class="req">*</span></label>
+        <div style="display:flex;gap:16px;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="bc-platform" value="aws" onchange="onBucketPlatformChange()"> AWS S3</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="bc-platform" value="aliyun" onchange="onBucketPlatformChange()"> 阿里云 OSS</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="bc-platform" value="baidu" onchange="onBucketPlatformChange()"> 百度云 BOS</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Bucket 名称 <span class="req">*</span></label>
+        <input type="text" id="bc-name" placeholder="仅小写字母、数字和连字符" style="margin-top:6px">
+        <div style="font-size:11.5px;color:var(--g400);margin-top:5px;line-height:1.5">
+          · 仅允许小写字母、数字和连字符（-），长度 3~63 字符<br>
+          · S3/OSS/BOS 名称<strong>全局唯一</strong>，建议加上团队或项目前缀，如 <code style="background:var(--g100);padding:1px 4px;border-radius:3px">vast3d-prod-data</code>
+        </div>
+      </div>
+      <div class="field">
+        <label>地域 <span class="req">*</span></label>
+        <select id="bc-region" style="margin-top:6px">
+          <option value="">请先选择云平台</option>
+        </select>
+      </div>
+      <div id="bc-err" class="err-text"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn-ghost" onclick="closeBucketCreateModal()">取消</button>
+        <button class="btn-primary" onclick="submitBucketCreate()">创建</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 创建策略弹窗 -->
+<!-- 创建 DSW 弹窗 --><div id="modal-pai-create" class="modal-overlay hidden" onclick="closePaiCreateModal()">
+  <div class="modal" style="width:640px;max-width:95vw" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>创建 DSW 实例</h3>
+      <button class="modal-close" onclick="closePaiCreateModal()">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <!-- 分组：基本信息 -->
+      <div>
+        <div class="group-section-title">基本信息</div>
+        <div class="form-row">
+          <div class="field">
+            <label>地域 <span class="req">*</span></label>
+            <select id="pai-region" style="margin-top:6px" onchange="onPaiRegionChange()"></select>
+          </div>
+          <div class="field">
+            <label>工作区 <span class="req">*</span></label>
+            <select id="pai-workspace" style="margin-top:6px" onchange="onPaiWorkspaceChange()"><option value="">加载中...</option></select>
+          </div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label>实例名称 <span class="req">*</span></label>
+          <input type="text" id="pai-name" placeholder="仅字母、数字、下划线，如 dsw_train01" style="margin-top:6px">
+          <div style="font-size:11.5px;color:var(--g400);margin-top:5px;line-height:1.5">
+            · <strong>建议实例名与用户名保持一致</strong><br>
+            · 此名称作为统一标识贯穿 CPFS fileset、OSS 数据集及各挂载路径（<code>/mnt/pfs/users/{实例名}</code> 等），请谨慎命名
+          </div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label>实例归属人 (Owner) <span class="req">*</span></label>
+          <input type="text" id="pai-owner-search" placeholder="🔍 搜索成员名..." style="margin-top:6px" oninput="onPaiOwnerSearch()">
+          <select id="pai-owner" size="5" style="margin-top:6px;width:100%"><option value="">请先选择工作区</option></select>
+          <div style="font-size:11.5px;color:var(--g400);margin-top:5px;line-height:1.5">
+            · 只能选该工作区的成员；若目标用户不在列表，请先用「成员管理」把他加入工作区并分配角色
+          </div>
+        </div>
+      </div>
+
+      <!-- 分组：计算配置 -->
+      <div>
+        <div class="group-section-title">计算配置</div>
+        <div class="field">
+        <label>资源池 <span class="req">*</span></label>
+        <select id="pai-resource" style="margin-top:6px" onchange="loadPaiNodes()"><option value="">请先选择工作区</option></select>
+        <div style="font-size:11.5px;color:var(--g400);margin-top:5px;line-height:1.5">
+          · 从当前工作区已分配的资源配额（灵骏智算 / 通用计算）中创建，实例算力由资源池提供
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>资源规格 <span class="req">*</span></label>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <div style="flex:1">
+            <input type="number" id="pai-rs-gpu" min="0" placeholder="GPU (卡)" style="width:100%">
+          </div>
+          <div style="flex:1">
+            <input type="number" id="pai-rs-cpu" min="1" value="2" placeholder="CPU (核)" style="width:100%">
+          </div>
+          <div style="flex:1">
+            <input type="number" id="pai-rs-mem" min="1" value="8" placeholder="内存 (GiB)" style="width:100%">
+          </div>
+          <div style="flex:1">
+            <input type="number" id="pai-rs-shm" min="0" value="8" placeholder="共享内存 (GiB)" style="width:100%">
+          </div>
+        </div>
+        <div style="font-size:11.5px;color:var(--g400);margin-top:5px">· 从资源池中切出的实例规格；CPU、内存必填，GPU/共享内存按需</div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>优先级 <span class="req">*</span></label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+          <input type="range" id="pai-priority" min="1" max="9" step="1" value="1" style="flex:1" oninput="document.getElementById('pai-priority-val').textContent=this.value">
+          <span id="pai-priority-val" style="min-width:20px;text-align:center;font-weight:500">1</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--g400);margin-top:5px">· 1（低）~ 9（高），资源紧张时高优先级实例优先调度；默认 1</div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>指定节点调度</label>
+        <select id="pai-node" style="margin-top:6px"><option value="">自动调度（不指定）</option></select>
+        <div style="font-size:11.5px;color:var(--g400);margin-top:5px">· 可选；指定后实例调度到该节点，留空则由平台自动分配。节点随资源池变化</div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>镜像 <span class="req">*</span></label>
+        <input type="text" id="pai-image-search" placeholder="🔍 搜索镜像，如 pytorch / gpu / cu128..." style="margin-top:6px" oninput="onPaiImageSearch()">
+        <select id="pai-image" size="6" style="margin-top:6px;width:100%" onchange="onPaiImageChange()"><option value="">加载中...</option></select>
+        <div id="pai-image-current" style="font-size:12px;color:var(--g600);margin-top:6px;padding:6px 10px;background:var(--g50);border-radius:6px">当前选择：<span style="color:var(--g400)">未选择</span></div>
+        <div style="font-size:11.5px;color:var(--g400);margin-top:5px">· 阿里云官方 DSW 镜像，输入关键字过滤</div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="pai-ssh-enabled" onchange="document.getElementById('pai-ssh-key-wrap').classList.toggle('hidden', !this.checked)">
+          启用 SSH 访问
+        </label>
+        <div id="pai-ssh-key-wrap" class="hidden" style="margin-top:8px">
+          <textarea id="pai-ssh-key" rows="2" placeholder="粘贴 SSH 公钥，如 ssh-ed25519 AAAA... 或 ssh-rsa AAAA..." style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px"></textarea>
+          <div style="font-size:11.5px;color:var(--g400);margin-top:5px">· 启用后实例挂入 VPC 内网，分配内网 IP，可通过 <code>ssh root@内网IP</code>（22 端口）直连。VPC 网络复用当前地域配置</div>
+        </div>
+      </div>
+      </div>
+
+      <!-- 分组：存储与挂载 -->
+      <div>
+        <div class="group-section-title">存储与挂载</div>
+        <div class="field">
+        <label>系统盘大小 (GiB)</label>
+        <input type="number" id="pai-disk" min="30" value="100" placeholder="如 100，留空用默认" style="margin-top:6px;width:100%">
+        <div style="font-size:11.5px;color:var(--g400);margin-top:5px">· 实例系统盘容量，挂载于 /mnt/systemDisk</div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>关联数据集 / CPFS</label>
+        <input type="text" id="pai-dataset-search" placeholder="🔍 搜索数据集名称..." style="margin-top:6px" oninput="onPaiDatasetSearch()">
+        <div id="pai-datasets" style="margin-top:6px;max-height:150px;overflow:auto;border:1px solid var(--g200);border-radius:6px;padding:8px">
+          <div style="color:var(--g400);font-size:12px">加载中...</div>
+        </div>
+        <div style="font-size:11.5px;color:var(--g400);margin-top:5px;line-height:1.5">
+          · 可多选，勾选的数据集将挂载到 DSW 实例<br>
+          · CPFS 类型数据集需与实例在<strong>同一 VPC / 可用区</strong>，否则挂载失败
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="pai-cpfs-enabled" onchange="onPaiCpfsToggle()"> 挂载 CPFS 工作目录
+        </label>
+        <div id="pai-cpfs-box" style="margin-top:8px;display:none">
+          <div id="pai-cpfs-info" style="font-size:11.5px;color:var(--g400);margin-bottom:6px"></div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1">
+              <input type="number" id="pai-cpfs-size" min="10" step="1" value="10000" placeholder="容量 (GiB，≥10)" style="width:100%">
+            </div>
+            <div style="flex:1">
+              <input type="number" id="pai-cpfs-filecount" min="10000" max="10000000000" step="1" value="10000000" placeholder="文件数 (≥1万)" style="width:100%">
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--g400);margin-top:5px;line-height:1.5">
+            · 容量最小 10 GiB；文件数 1万 ~ 100亿<br>
+            · 自动在 CPFS 创建 fileset（路径 /{实例名}/）+ 配额，挂载到 <code>/mnt/pfs/users/{实例名}</code> 作为 workspace 工作目录
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="pai-oss-enabled" onchange="onPaiOssToggle()"> 新建并挂载 OSS 数据集
+        </label>
+        <div id="pai-oss-box" style="margin-top:8px;display:none">
+          <div style="display:flex;gap:16px;align-items:center">
+            <span style="font-size:12px;color:var(--g600)">读写权限：</span>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="pai-oss-access" value="RW" checked> 读写 (RW)</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="pai-oss-access" value="RO"> 只读 (RO)</label>
+          </div>
+
+          <!-- OSS 参数：可手动输入，留空则用默认值 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+            <div class="field" style="margin-bottom:0">
+              <label style="font-size:12px">Bucket</label>
+              <input type="text" id="pai-oss-bucket" list="pai-oss-bucket-list"
+                     placeholder="sh-algo-pub-rw" oninput="onPaiOssParamChange()"
+                     style="font-family:monospace;font-size:12.5px">
+              <datalist id="pai-oss-bucket-list"></datalist>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label style="font-size:12px">OSS 路径前缀</label>
+              <input type="text" id="pai-oss-prefix" placeholder="share" oninput="onPaiOssPrefixChange()"
+                     style="font-family:monospace;font-size:12.5px">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;margin-top:10px">
+            <label style="font-size:12px">容器内挂载路径</label>
+            <input type="text" id="pai-oss-mount-path" placeholder="/mnt/share/" oninput="onPaiOssMountPathInput()"
+                   style="font-family:monospace;font-size:12.5px">
+          </div>
+
+          <!-- 挂载高级参数：默认收起，字段名取自真实环境探测 -->
+          <div style="margin-top:10px">
+            <span id="pai-oss-adv-toggle" onclick="togglePaiOssAdv()"
+                  style="font-size:12px;color:var(--primary);cursor:pointer;user-select:none">▸ 挂载高级参数（可选）</span>
+          </div>
+          <div id="pai-oss-adv-box" style="display:none;margin-top:8px;padding:10px 12px;background:var(--g50);border:1px solid var(--g200);border-radius:8px">
+            <div class="field" style="margin-bottom:0">
+              <label style="font-size:12px">RAM 角色 ARN (RoleArn)</label>
+              <input type="text" id="pai-oss-role-arn" placeholder="acs:ram::1234567890:role/your-role"
+                     style="font-family:monospace;font-size:12.5px">
+            </div>
+            <div class="field" style="margin-bottom:0;margin-top:10px">
+              <label style="font-size:12px">高级配置 JSON (Options)</label>
+              <textarea id="pai-oss-options-json" rows="3" placeholder='{"fs.oss.download.thread.concurrency": 16}'
+                        style="font-family:monospace;font-size:12px;width:100%;padding:8px 10px;border:1.5px solid var(--g200);border-radius:8px;resize:vertical"></textarea>
+            </div>
+            <div style="font-size:11px;color:var(--g400);margin-top:6px;line-height:1.5">
+              · 需为 JSON 对象，会与 <code>mountPath</code> 合并写入数据集 Options<br>
+              · 两项均可留空；留空则不传该参数，走云端默认行为
+            </div>
+          </div>
+
+          <div style="font-size:11.5px;color:var(--g400);margin-top:8px;line-height:1.6">
+            · 三项已填好默认值，可直接创建；改前缀时挂载路径会自动跟随（手改过则不再跟随）<br>
+            · 实际效果：<span id="pai-oss-effect" style="color:var(--g600)"></span><br>
+            · 可见范围：数据所有者、管理员；数据集读写：仅数据所有者
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <div id="pai-err" class="err-text"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--g100);padding-top:16px">
+        <button class="btn-ghost" onclick="closePaiCreateModal()">取消</button>
+        <button class="btn-primary" id="pai-preview-btn" onclick="showPaiPreview()">预览并创建</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 创建 DSW 预览确认弹窗 -->
+<div id="modal-pai-preview" class="modal-overlay hidden" onclick="closePaiPreview()">
+  <div class="modal" style="width:520px;max-width:95vw" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>确认创建 DSW 实例</h3>
+      <button class="modal-close" onclick="closePaiPreview()">✕</button>
+    </div>
+    <div>
+      <div style="font-size:12.5px;color:var(--g500);margin-bottom:12px">请核对以下配置，确认后将创建实例及相关存储资源（会产生计费）：</div>
+      <div id="pai-preview-body"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--g100);padding-top:16px;margin-top:16px">
+        <button class="btn-ghost" onclick="closePaiPreview()">返回修改</button>
+        <button class="btn-primary" id="pai-confirm-btn" onclick="submitPaiCreate()">确认创建</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- workspace 成员管理弹窗 -->
+<!-- 审计详情 -->
+<div id="modal-audit-detail" class="modal-overlay hidden" onclick="closeAuditDetail()">
+  <div class="modal" style="width:680px;max-width:95vw" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>操作详情</h3>
+      <button class="modal-close" onclick="closeAuditDetail()">✕</button>
+    </div>
+    <div id="audit-detail-content"></div>
+  </div>
+</div>
+
+<div id="modal-pai-members" class="modal-overlay hidden" onclick="closePaiMembersModal()">
+  <div class="modal" style="width:640px;max-width:95vw" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>工作区成员管理</h3>
+      <button class="modal-close" onclick="closePaiMembersModal()">✕</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;gap:8px">
+        <div class="field" style="flex:1">
+          <label>地域</label>
+          <select id="pm-region" style="margin-top:6px" onchange="onPmRegionChange()"></select>
+        </div>
+        <div class="field" style="flex:2">
+          <label>工作区</label>
+          <select id="pm-workspace" style="margin-top:6px" onchange="loadPmWorkspaceData()"><option value="">加载中...</option></select>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-weight:600;font-size:13px;color:var(--g700)">当前成员</label>
+          <span id="pm-members-count" style="font-size:12px;color:var(--g400)"></span>
+        </div>
+        <div id="pm-members-list" style="max-height:240px;overflow:auto;border:1px solid var(--g200);border-radius:8px;background:var(--g50)">
+          <div style="color:var(--g400);font-size:12px;padding:16px;text-align:center">加载中...</div>
+        </div>
+      </div>
+
+      <div class="perm-operate" style="border-top:1px solid var(--g200);padding-top:16px">
+        <label style="font-weight:600;font-size:13px;color:var(--g700)">添加成员</label>
+        <div class="field" style="margin-top:8px">
+          <input type="text" id="pm-user-search" placeholder="🔍 搜索 RAM 用户名..." oninput="onPmUserSearch()">
+          <select id="pm-add-user" size="5" style="margin-top:8px;width:100%"><option value="">加载中...</option></select>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label style="font-size:12px;color:var(--g600)">分配角色（可多选）</label>
+          <div id="pm-add-roles" style="margin-top:6px;max-height:160px;overflow:auto;border:1px solid var(--g200);border-radius:8px;padding:10px 12px;background:var(--g50)">
+            <div style="color:var(--g400);font-size:12px">请先选择工作区</div>
+          </div>
+        </div>
+        <div id="pm-err" class="err-text"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">
+          <button class="btn-primary" onclick="submitPmAddMember()">添加成员</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 创建策略弹窗 -->
+<div id="modal-policy-create" class="modal-overlay hidden" onclick="closePolicyCreateModal()">
+  <div class="modal" style="width:540px;max-width:95vw" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>创建自定义策略</h3>
+      <button class="modal-close" onclick="closePolicyCreateModal()">✕</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+      <div class="field">
+        <label>云平台 <span class="req">*</span></label>
+        <div style="display:flex;gap:16px;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="pc-platform" value="aws"> AWS</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="pc-platform" value="aliyun"> 阿里云</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="pc-platform" value="baidu"> 百度云</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>策略名称 <span class="req">*</span></label>
+        <input type="text" id="pc-name" placeholder="MyCustomPolicy" style="margin-top:6px">
+      </div>
+      <div class="field">
+        <label>描述</label>
+        <input type="text" id="pc-desc" placeholder="策略用途说明（可选）" style="margin-top:6px">
+      </div>
+      <div class="field">
+        <label>策略文档 (JSON) <span class="req">*</span></label>
+        <textarea id="pc-document" rows="8" placeholder='{"Version":"1","Statement":[{"Effect":"Allow","Action":["*"],"Resource":["*"]}]}' style="margin-top:6px;font-family:monospace;font-size:12px;resize:vertical"></textarea>
+      </div>
+      <div id="pc-err" class="err-text"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn-ghost" onclick="closePolicyCreateModal()">取消</button>
+        <button class="btn-primary" onclick="submitPolicyCreate()">创建</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 个人信息设置弹窗（首次飞书登录 / 手动修改） -->
+<div id="profile-setup-modal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:480px;padding:0" onclick="event.stopPropagation()">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border)">
+      <h3 style="margin:0 0 4px">完善个人信息</h3>
+      <p class="sub" style="margin:0">此信息将用于云账号申请，请填写真实信息</p>
+    </div>
+    <div style="padding:20px 24px">
+      <!-- 姓名：已从飞书同步时只读展示，否则输入框 -->
+      <div id="profile-name-readonly" style="display:none;margin-bottom:14px">
+        <div style="font-size:12px;color:var(--g500);margin-bottom:4px">姓名（已从飞书账户同步）</div>
+        <div style="font-size:14px;font-weight:500;color:var(--g700);padding:6px 10px;background:var(--g50);border-radius:6px;border:1px solid var(--border)"></div>
+      </div>
+      <div id="profile-name-field" class="field">
+        <label>姓名 <span class="req">*</span></label>
+        <input type="text" id="profile-real-name" placeholder="真实姓名，如：张三">
+        <div style="font-size:12px;color:var(--g400);margin-top:4px">申请资源时使用的真实姓名</div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>账号名称 <span class="req">*</span></label>
+        <input type="text" id="profile-cloud-username" placeholder="英文账号名，如：zhangsan">
+        <div style="font-size:12px;color:var(--g400);margin-top:4px">云平台登录名，建议使用姓名拼音（仅字母、数字及 _ - 等）</div>
+      </div>
+      <p id="profile-err" class="err-text" style="margin-top:10px"></p>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+      <button id="profile-setup-cancel" class="btn-ghost" onclick="closeProfileSetupModal()">取消</button>
+      <button class="btn-primary" onclick="saveUserProfile()">保存</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,14 @@
+node_modules
+.git
+.env
+.claude
+.cursor
+memory
+mysql.md
+readme.md
+*.log
+server.log
+db/dump-cloud_iam.sql
+db/*.db
+public/uploads
+.DS_Store
