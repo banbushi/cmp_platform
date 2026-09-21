@@ -1,9 +1,11 @@
+version: "2.4"
+
 services:
   mysql:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-BVPVewseB8F4kWk}
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-BVPVewseB8F4kWk}"
       MYSQL_DATABASE: cloud_cmp
     volumes:
       - mysql_data:/var/lib/mysql
@@ -24,9 +26,9 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-BVPVewseB8F4kWk}
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:-BVPVewseB8F4kWk}"
       DB_NAME: cloud_cmp
-      JWT_SECRET: ${JWT_SECRET:-cloud-iam-dev-secret-x9k2m7}
+      JWT_SECRET: "${JWT_SECRET:-cloud-iam-dev-secret-x9k2m7}"
     depends_on:
       mysql:
         condition: service_healthy
