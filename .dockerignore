@@ -1,14 +1,22 @@
-node_modules
+# 进镜像的只有 cp.sh 那份运行时文件：
+# server.js / package*.json / middleware / public / routes / utils
 .git
-.env
 .claude
 .cursor
-memory
-mysql.md
-readme.md
-*.log
-server.log
-db/dump-cloud_iam.sql
-db/*.db
-public/uploads
+.env
+.env.*
 .DS_Store
+.gitignore
+
+node_modules
+memory
+db
+*.log
+readme.md
+README.md
+cp.sh
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+public/uploads
