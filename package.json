@@ -35,6 +35,6 @@
     "express-fileupload": "^1.5.2",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.17.5",
-    "uuid": "^13.0.0"
+    "uuid": "^11.1.1"
   }
 }
