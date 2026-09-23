@@ -2,9 +2,9 @@
 set -e
 
 CERT_DIR=/etc/nginx/certs
-CRT="$CERT_DIR/vast-internal.com.pem"
-KEY="$CERT_DIR/vast-internal.com.key"
-CN="${SSL_CN:-cmp.vast-internal.com}"
+CRT="$CERT_DIR/tripo3d.com.crt"
+KEY="$CERT_DIR/tripo3d.com.key"
+CN="${SSL_CN:-cmp.tripo3d.com}"
 
 mkdir -p "$CERT_DIR"
 
