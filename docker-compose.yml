@@ -7,6 +7,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-BVPVewseB8F4kWk}"
       MYSQL_DATABASE: cloud_cmp
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
