@@ -108,6 +108,29 @@ const GROUP_LABELS = {
   tickets: '工单申请'
 };
 
+// 子菜单显示名，用于角色列表里展示已勾选的子菜单
+const SECTION_LABELS = {
+  'apply-account': '账号申请', 'apply-resource': '资源申请', 'approval-tickets': '申请记录',
+  'cloud-accounts': '云账号', create: '创建账号', 'third-accounts': '平台工具账号', groups: '组同步', policies: '策略管理',
+  instances: '云主机', clusters: '容器集群', 'pai-dsw': 'PAI DSW', jumpserver: '堡垒机管理',
+  'rds-mysql': 'MySQL 实例', 'rds-postgres': 'PostgreSQL 实例', 'rds-redis': 'Redis 实例',
+  'security-groups': '安全组', vpcs: 'VPC', subnets: '子网', 'ssl-certs': 'SSL 证书', 'dns-records': 'DNS 解析', 'vpn-clients': 'VPN 客户端',
+  disks: '磁盘', buckets: '对象存储', cpfs: 'CPFS 存储',
+  'billing-aws': 'AWS 账单', 'billing-aliyun': '阿里云账单', 'billing-baidu': '百度云账单',
+  roles: '系统角色', 'admin-accounts': '系统账号', settings: '接入集成', 'apply-config': '申请项配置', audit: '操作审计', feedback: '反馈管理'
+};
+
+// 角色对某个子菜单是否可见。
+// accessible_sections 为 null/缺省时不限制（组内全部可见），兼容只存菜单组的旧角色。
+function roleHasSection(roleData, section) {
+  if (!roleData) return false;
+  const group = SECTION_GROUP[section];
+  if (group && !(roleData.accessible_groups || []).includes(group)) return false;
+  const sections = roleData.accessible_sections;
+  if (!Array.isArray(sections)) return true;
+  return sections.includes(section);
+}
+
 const BUILTIN_ROLE_DEFAULTS = {
   admin: {
     accessible_groups: ['accounts', 'compute', 'database', 'network', 'storage', 'billing', 'system', 'tickets'],

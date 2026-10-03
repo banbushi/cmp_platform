@@ -399,8 +399,14 @@ function renderRolesTable(roles) {
         <th>显示名</th><th>角色标识</th><th>描述</th><th>可访问菜单</th><th>工单提交权限</th><th>操作权限</th><th>操作</th>
       </tr></thead>
       <tbody>${roles.map(role => {
-        const groupBadges = (role.accessible_groups || [])
-          .map(g => `<span class="group-badge">${GROUP_LABELS[g] || g}</span>`).join('');
+        const groupBadges = (role.accessible_groups || []).map(g => {
+          const label = GROUP_LABELS[g] || g;
+          const sections = role.accessible_sections;
+          if (!Array.isArray(sections)) return `<span class="group-badge">${label}</span>`;
+          const picked = sections.filter(s => SECTION_GROUP[s] === g).map(s => SECTION_LABELS[s] || s);
+          const title = picked.length ? ` title="${esc(picked.join('、'))}"` : '';
+          return `<span class="group-badge"${title}>${label}（${picked.length}）</span>`;
+        }).join('');
         const opBadge = role.can_operate
           ? '<span class="tag tag-ops">可操作</span>'
           : '<span class="tag tag-user">只读</span>';
@@ -441,7 +447,57 @@ function renderRolesTable(roles) {
 // 当前编辑中的角色 id；null 表示创建模式
 let _roleEditingId = null;
 
-function showRoleCreateModal() {
+// 菜单目录来自后端 /roles/menu-catalog，父子菜单只维护这一份
+let _menuCatalog = null;
+
+async function ensureMenuCatalog() {
+  if (_menuCatalog) return _menuCatalog;
+  const r = await get('/roles/menu-catalog');
+  if (r.ok) _menuCatalog = r.data.catalog;
+  return _menuCatalog;
+}
+
+function renderRoleMenuTree(groups, sections) {
+  const wrap = document.getElementById('r-menu-tree');
+  if (!_menuCatalog) { wrap.innerHTML = '<div class="empty-tip">菜单加载失败</div>'; return; }
+  // sections 为 null 表示旧数据未限制子菜单，组内全部勾选
+  const allSections = !Array.isArray(sections);
+  wrap.innerHTML = _menuCatalog.map(g => {
+    const groupOn = (groups || []).includes(g.group);
+    const children = g.children.map(c => {
+      const on = groupOn && (allSections || sections.includes(c.section));
+      return `<label class="perm-check-item"><input type="checkbox" name="r-section" data-group="${g.group}" value="${c.section}" ${on ? 'checked' : ''} onchange="onRoleSectionChange('${g.group}')"> ${esc(c.label)}</label>`;
+    }).join('');
+    return `<div class="menu-perm-group">
+      <label class="perm-check-item"><input type="checkbox" name="r-group" value="${g.group}" ${groupOn ? 'checked' : ''} onchange="onRoleGroupChange('${g.group}')"> <strong>${esc(g.label)}</strong></label>
+      <div class="menu-perm-children">${children}</div>
+    </div>`;
+  }).join('');
+  _menuCatalog.forEach(g => syncRoleGroupState(g.group));
+}
+
+// 勾父级：整组子菜单跟随全选/全不选
+function onRoleGroupChange(group) {
+  const on = document.querySelector(`input[name="r-group"][value="${group}"]`).checked;
+  document.querySelectorAll(`input[name="r-section"][data-group="${group}"]`).forEach(el => { el.checked = on; });
+  syncRoleGroupState(group);
+}
+
+// 勾子级：回写父级的全选/半选状态；一个子级都没勾时父级取消
+function onRoleSectionChange(group) {
+  syncRoleGroupState(group);
+}
+
+function syncRoleGroupState(group) {
+  const parent = document.querySelector(`input[name="r-group"][value="${group}"]`);
+  const children = [...document.querySelectorAll(`input[name="r-section"][data-group="${group}"]`)];
+  if (!parent || !children.length) return;
+  const checked = children.filter(el => el.checked).length;
+  parent.checked = checked > 0;
+  parent.indeterminate = checked > 0 && checked < children.length;
+}
+
+async function showRoleCreateModal() {
   _roleEditingId = null;
   document.getElementById('role-modal-title').textContent = '创建系统角色';
   document.getElementById('role-submit-btn').textContent = '创建';
@@ -450,17 +506,18 @@ function showRoleCreateModal() {
   document.getElementById('r-display').value = '';
   document.getElementById('r-desc').value = '';
   document.getElementById('r-can-operate').checked = false;
-  document.querySelectorAll('input[name="r-group"]').forEach(el => el.checked = false);
   document.querySelectorAll('input[name="r-ticket-mode"]').forEach(el => el.checked = el.value === 'all');
   document.querySelectorAll('input[name="r-ticket-platform"]').forEach(el => el.checked = false);
   document.getElementById('r-ticket-platforms').style.display = 'none';
   document.getElementById('role-create-err').textContent = '';
   document.getElementById('role-create-modal').classList.remove('hidden');
+  await ensureMenuCatalog();
+  renderRoleMenuTree([], []);
 }
 
 // 编辑角色：复用同一个弹窗，回填现有配置
 // 角色标识(name)不允许改——users.role 存的是 name，改了会让已有账号的角色失效
-function showRoleEditModal(id) {
+async function showRoleEditModal(id) {
   const role = (_allRoles || []).find(r => r.id === id);
   if (!role) { toast('角色不存在，请刷新重试', 'err'); return; }
   if (role.is_builtin) { toast('内置角色不可修改', 'err'); return; }
@@ -477,9 +534,6 @@ function showRoleEditModal(id) {
   document.getElementById('r-desc').value = role.description || '';
   document.getElementById('r-can-operate').checked = !!role.can_operate;
 
-  const groups = role.accessible_groups || [];
-  document.querySelectorAll('input[name="r-group"]').forEach(el => { el.checked = groups.includes(el.value); });
-
   // 工单权限三态：null/["all"]=全部，[]=禁止，其他=指定平台
   const tp = role.ticket_platforms;
   let mode = 'all';
@@ -495,6 +549,8 @@ function showRoleEditModal(id) {
 
   document.getElementById('role-create-err').textContent = '';
   document.getElementById('role-create-modal').classList.remove('hidden');
+  await ensureMenuCatalog();
+  renderRoleMenuTree(role.accessible_groups || [], role.accessible_sections);
 }
 
 function closeRoleCreateModal() {
@@ -515,7 +571,9 @@ async function submitRoleForm() {
   const display_name = document.getElementById('r-display').value.trim();
   const description  = document.getElementById('r-desc').value.trim();
   const can_operate  = document.getElementById('r-can-operate').checked;
-  const accessible_groups = [...document.querySelectorAll('input[name="r-group"]:checked')].map(el => el.value);
+  const accessible_sections = [...document.querySelectorAll('input[name="r-section"]:checked')].map(el => el.value);
+  // 菜单组不单独勾选，由已勾选的子菜单推导：勾了组内任一子菜单即拥有该组
+  const accessible_groups = [...new Set(accessible_sections.map(s => SECTION_GROUP[s]).filter(Boolean))];
 
   // 工单平台权限
   const ticketMode = document.querySelector('input[name="r-ticket-mode"]:checked')?.value || 'all';
@@ -535,8 +593,8 @@ async function submitRoleForm() {
   const editing = !!_roleEditingId;
   // 编辑时不传 name（后端 PUT 也不接受改标识）
   const body = editing
-    ? { display_name, description, accessible_groups, ticket_platforms, can_operate }
-    : { name, display_name, description, accessible_groups, ticket_platforms, can_operate };
+    ? { display_name, description, accessible_groups, accessible_sections, ticket_platforms, can_operate }
+    : { name, display_name, description, accessible_groups, accessible_sections, ticket_platforms, can_operate };
   const r = editing
     ? await put(`/roles/${_roleEditingId}`, body)
     : await post('/roles', body);

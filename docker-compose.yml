@@ -31,6 +31,10 @@ services:
       DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:-BVPVewseB8F4kWk}"
       DB_NAME: cloud_cmp
       JWT_SECRET: "${JWT_SECRET:-cloud-iam-dev-secret-x9k2m7}"
+      # 飞书 OAuth 回调地址，须与开放平台「安全设置 → 重定向 URL」完全一致（含协议）。
+      # 留空时由 server.js 的 trust proxy + X-Forwarded-Proto 自动推导出 https；
+      # 显式配置则更保险（不受请求头影响）。
+      FEISHU_REDIRECT_URI: "${FEISHU_REDIRECT_URI:-}"
     depends_on:
       mysql:
         condition: service_healthy

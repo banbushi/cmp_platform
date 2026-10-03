@@ -2768,7 +2768,7 @@
 
   <!-- 创建角色弹窗 -->
   <div id="role-create-modal" class="modal-overlay hidden" onclick="closeRoleCreateModal()">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:480px">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:560px">
       <div class="modal-header">
         <h3 id="role-modal-title">创建系统角色</h3>
         <button class="modal-close" onclick="closeRoleCreateModal()">✕</button>
@@ -2790,15 +2790,8 @@
         </div>
         <div class="field">
           <label>可访问菜单</label>
-          <div class="perm-checks">
-            <label class="perm-check-item"><input type="checkbox" name="r-group" value="compute"> 计算资源</label>
-            <label class="perm-check-item"><input type="checkbox" name="r-group" value="database"> 数据库资源</label>
-            <label class="perm-check-item"><input type="checkbox" name="r-group" value="network"> 网络资源</label>
-            <label class="perm-check-item"><input type="checkbox" name="r-group" value="storage"> 存储资源</label>
-            <label class="perm-check-item"><input type="checkbox" name="r-group" value="billing"> 费用账单</label>
-            <label class="perm-check-item"><input type="checkbox" name="r-group" value="accounts"> 账号资源</label>
-            <label class="perm-check-item"><input type="checkbox" name="r-group" value="system"> 系统设置</label>
-            <label class="perm-check-item"><input type="checkbox" name="r-group" value="tickets"> 工单申请</label>
+          <div id="r-menu-tree" class="menu-perm-tree">
+            <div class="empty-tip">加载中...</div>
           </div>
         </div>
         <div class="field">

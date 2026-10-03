@@ -2,6 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../utils/database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { VALID_SECTIONS } = require('../utils/menu-catalog');
 
 const router = express.Router();
 
@@ -9,10 +10,18 @@ function parseRole(r) {
   return {
     ...r,
     accessible_groups: JSON.parse(r.accessible_groups || '[]'),
+    // null = 未配置子菜单限制，组内全部子菜单可见（兼容只存组的旧数据）
+    accessible_sections: JSON.parse(r.accessible_sections || 'null'),
     ticket_platforms:  JSON.parse(r.ticket_platforms || 'null'),
     can_operate: !!r.can_operate,
     is_builtin:  !!r.is_builtin
   };
+}
+
+// 只保留目录里存在的 section，防止提交任意字符串绕过菜单控制
+function sanitizeSections(sections) {
+  if (!Array.isArray(sections)) return null;
+  return [...new Set(sections.filter(s => VALID_SECTIONS.has(s)))];
 }
 
 // 获取所有角色
@@ -25,9 +34,14 @@ router.get('/', authenticate, async (req, res) => {
   res.json({ roles: rows.map(parseRole) });
 });
 
+// 菜单目录，前端按它渲染父子菜单勾选，避免前后端各维护一份菜单清单
+router.get('/menu-catalog', authenticate, (req, res) => {
+  res.json({ catalog: require('../utils/menu-catalog').MENU_CATALOG });
+});
+
 // 创建自定义角色
 router.post('/', authenticate, requireAdmin, async (req, res) => {
-  const { name, display_name, description, accessible_groups, ticket_platforms, can_operate } = req.body;
+  const { name, display_name, description, accessible_groups, accessible_sections, ticket_platforms, can_operate } = req.body;
   if (!name || !display_name) return res.status(400).json({ error: '请填写角色标识和显示名' });
   if (!/^[a-z][a-z0-9_-]*$/.test(name)) return res.status(400).json({ error: '角色标识只能包含小写字母、数字、下划线和连字符' });
 
@@ -36,8 +50,8 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 
   const id = uuidv4();
   await db.run(
-    'INSERT INTO system_roles (id, name, display_name, description, accessible_groups, ticket_platforms, can_operate, is_builtin) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
-    [id, name, display_name, description || '', JSON.stringify(accessible_groups || []), JSON.stringify(ticket_platforms || null), can_operate ? 1 : 0]
+    'INSERT INTO system_roles (id, name, display_name, description, accessible_groups, accessible_sections, ticket_platforms, can_operate, is_builtin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)',
+    [id, name, display_name, description || '', JSON.stringify(accessible_groups || []), JSON.stringify(sanitizeSections(accessible_sections)), JSON.stringify(ticket_platforms || null), can_operate ? 1 : 0]
   );
   res.status(201).json({ message: '角色创建成功', id });
 });
@@ -48,10 +62,10 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   if (!role) return res.status(404).json({ error: '角色不存在' });
   if (role.is_builtin) return res.status(403).json({ error: '内置角色不可修改' });
 
-  const { display_name, description, accessible_groups, ticket_platforms, can_operate } = req.body;
+  const { display_name, description, accessible_groups, accessible_sections, ticket_platforms, can_operate } = req.body;
   await db.run(
-    'UPDATE system_roles SET display_name=?, description=?, accessible_groups=?, ticket_platforms=?, can_operate=? WHERE id=?',
-    [display_name, description || '', JSON.stringify(accessible_groups || []), JSON.stringify(ticket_platforms || null), can_operate ? 1 : 0, req.params.id]
+    'UPDATE system_roles SET display_name=?, description=?, accessible_groups=?, accessible_sections=?, ticket_platforms=?, can_operate=? WHERE id=?',
+    [display_name, description || '', JSON.stringify(accessible_groups || []), JSON.stringify(sanitizeSections(accessible_sections)), JSON.stringify(ticket_platforms || null), can_operate ? 1 : 0, req.params.id]
   );
   res.json({ message: '角色已更新' });
 });

@@ -59,9 +59,8 @@ async function showMain() {
   const requestedSection = hashSection || lastSection || fallback;
 
   // 检查请求的页面是否有权限访问（lastSection 可能是改角色前留下的旧页面）
-  if (requestedSection !== 'overview' && requestedSection !== 'my-profile' && _myRoleData) {
-    const group = SECTION_GROUP[requestedSection];
-    if (group && !(_myRoleData.accessible_groups || []).includes(group)) {
+  if (requestedSection !== 'overview' && requestedSection !== 'my-profile' && requestedSection !== 'perm-query' && _myRoleData) {
+    if (!roleHasSection(_myRoleData, requestedSection)) {
       targetSection = fallback; // 无权限，回到该角色的默认页
     } else {
       targetSection = requestedSection;

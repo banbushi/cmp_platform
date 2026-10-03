@@ -409,6 +409,11 @@ body.role-viewer   .perm-admin-only { display:none!important }
 .perm-checks{display:flex;flex-wrap:wrap;gap:10px 24px;padding:10px 14px;background:var(--g50);border:1px solid var(--g200);border-radius:8px}
 .perm-check-item{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13.5px;color:var(--g700)}
 .perm-check-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--primary);cursor:pointer}
+.menu-perm-tree{max-height:320px;overflow-y:auto;padding:6px 14px;background:var(--g50);border:1px solid var(--g200);border-radius:8px}
+.menu-perm-group{padding:7px 0;border-bottom:1px solid var(--g200)}
+.menu-perm-group:last-child{border-bottom:none}
+.menu-perm-children{display:flex;flex-wrap:wrap;gap:4px 16px;padding:4px 0 2px 24px}
+.menu-perm-children .perm-check-item{font-size:12.5px;color:var(--g600)}
 
 /* ── 角色权限标签 ── */
 .group-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11.5px;font-weight:600;margin:1px;background:var(--primary-l);color:var(--primary)}

@@ -28,6 +28,13 @@ const { auditMiddleware } = require('./middleware/audit');
 const app = express();
 const PORT = parseInt(process.env.PORT || '9001', 10);
 
+// 信任反代传来的 X-Forwarded-* 头。
+// nginx/nginx.conf 已设 `proxy_set_header X-Forwarded-Proto $scheme`，但 Express
+// 默认不信任代理头，req.protocol 仍返回 http，导致飞书 OAuth 回调被拼成
+// http://cmp.tripo3d.com/... 与开放平台配置的 https:// 不一致 → 「重定向 URL 有误」。
+// 只信任 1 跳（就是前面那个 nginx），不要用 true（等于信任任意客户端伪造的头）。
+app.set('trust proxy', 1);
+
 // ── 请求日志 ──
 app.use((req, res, next) => {
   const start = Date.now();
@@ -53,6 +60,24 @@ app.use(express.static(path.join(__dirname, 'public'), { etag: false, maxAge: 0 
 // 钩子在 handler 跑完才触发，那时各路由的 authenticate 已把 req.user 挂好，
 // 所以无需改动 88 个 handler。static 只响应 GET/HEAD，不受影响。
 app.use(auditMiddleware);
+
+// ── 轻量迁移：角色子菜单权限列 ──
+// accessible_groups 只到菜单组一级，accessible_sections 记录组内勾选的子菜单。
+// NULL 表示未限制（组内全部可见），兼容历史数据，所以只补列不回填。
+(async () => {
+  try {
+    const db = require('./utils/database');
+    const col = await db.get(
+      "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'system_roles' AND COLUMN_NAME = 'accessible_sections'"
+    );
+    if (!col) {
+      await db.run('ALTER TABLE system_roles ADD COLUMN accessible_sections text NULL AFTER accessible_groups');
+      console.log('  ✓ system_roles.accessible_sections 列已添加');
+    }
+  } catch (err) {
+    console.error('  ✗ 添加 accessible_sections 列失败:', err.message);
+  }
+})();
 
 app.use('/api/accounts', accountsRouter);
 app.use('/api/cloud', cloudRouter);

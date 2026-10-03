@@ -64,6 +64,12 @@ function applyRolePermissions(roleData) {
     const el = document.getElementById(`ng-${g}`);
     if (el) el.style.display = groups.includes(g) ? '' : 'none';
   });
+  // 子菜单级权限：组可见但只勾了部分子菜单时，隐藏未勾选的
+  document.querySelectorAll('.nav-sub-link[data-section]').forEach(el => {
+    const section = el.dataset.section;
+    if (!SECTION_GROUP[section]) return;
+    el.style.display = roleHasSection(roleData, section) ? '' : 'none';
+  });
   const navOverview = document.getElementById('nav-overview');
   if (navOverview) navOverview.style.display = canViewOverview() ? '' : 'none';
   const ovBilling = document.getElementById('overview-billing-block');
@@ -85,6 +91,7 @@ function applyRolePermissions(roleData) {
 function applyFeatureVisibility() {
   Object.keys(FEATURE_SECTIONS).forEach(section => {
     const el = document.querySelector(`.nav-sub-link[data-section="${section}"]`);
-    if (el) el.style.display = isFeatureVisible(section) ? '' : 'none';
+    // 角色本身没勾这个子菜单时，功能开关不能把它重新显示出来
+    if (el) el.style.display = (roleHasSection(_myRoleData, section) && isFeatureVisible(section)) ? '' : 'none';
   });
 }

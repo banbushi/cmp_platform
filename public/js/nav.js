@@ -4,8 +4,7 @@
 
 function navTo(section) {
   if (section !== 'overview' && section !== 'my-profile' && section !== 'perm-query' && _myRoleData) {
-    const group = SECTION_GROUP[section];
-    if (group && !(_myRoleData.accessible_groups || []).includes(group)) {
+    if (!roleHasSection(_myRoleData, section)) {
       section = 'my-profile';
     }
   }
