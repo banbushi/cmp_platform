@@ -465,6 +465,9 @@ async function createAliyunDswInstance(cred, opts) {
   }
   if (mounts.length) body.Datasets = mounts;
 
+  const script = (opts.start_script || '').trim();
+  if (script) body.UserCommand = { OnStart: { Content: script } };
+
   // 启用 SSH：挂进 VPC + 转发 22 端口。VPC 三件套复用同 region 已有实例的 UserVpc（该账号该 region 固定一套）
   if (opts.enable_ssh && opts.ssh_public_key) {
     const uv = await resolveRegionUserVpc(region);
@@ -510,9 +513,15 @@ router.post('/dsw', authenticate, requireOperate('compute'), async (req, res) =>
           oss_dataset_enabled, oss_dataset_access,
           oss_bucket, oss_prefix, oss_mount_path,
           oss_role_arn, oss_options_json,
-          enable_ssh, ssh_public_key } = req.body || {};
+          enable_ssh, ssh_public_key, start_script } = req.body || {};
   if (!workspace_id || !instance_name) {
     return res.status(400).json({ error: '请填写 workspace_id、instance_name' });
+  }
+  if (start_script != null && typeof start_script !== 'string') {
+    return res.status(400).json({ error: '自定义启动脚本格式不正确' });
+  }
+  if (start_script && start_script.length > 8192) {
+    return res.status(400).json({ error: '自定义启动脚本不能超过 8192 个字符' });
   }
   if (enable_ssh && !(ssh_public_key || '').trim()) {
     return res.status(400).json({ error: '启用 SSH 需填写 SSH 公钥' });
@@ -658,7 +667,7 @@ router.post('/dsw', authenticate, requireOperate('compute'), async (req, res) =>
 
   let created;
   try {
-    created = await createAliyunDswInstance(cred, { region, workspace_id, instance_name, image_id, dataset_mounts, owner_user_id, resource_id, cpu, memory, gpu, shared_memory, system_disk_size, priority, node_name, cpfs_mount, oss_dataset, enable_ssh, ssh_public_key });
+    created = await createAliyunDswInstance(cred, { region, workspace_id, instance_name, image_id, dataset_mounts, owner_user_id, resource_id, cpu, memory, gpu, shared_memory, system_disk_size, priority, node_name, cpfs_mount, oss_dataset, enable_ssh, ssh_public_key, start_script });
   } catch (err) {
     return res.status(500).json({ error: 'DSW 创建失败: ' + err.message });
   }

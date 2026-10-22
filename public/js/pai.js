@@ -190,6 +190,10 @@ function showPaiCreateModal() {
   if (sshEnabled) sshEnabled.checked = false;
   document.getElementById('pai-ssh-key') && (document.getElementById('pai-ssh-key').value = '');
   document.getElementById('pai-ssh-key-wrap')?.classList.add('hidden');
+  const startScript = document.getElementById('pai-start-script');
+  if (startScript) startScript.value = '';
+  const startScriptCount = document.getElementById('pai-start-script-count');
+  if (startScriptCount) startScriptCount.textContent = '已输入：0 个字符';
   document.getElementById('pai-priority').value = '1';
   document.getElementById('pai-priority-val').textContent = '1';
   document.getElementById('pai-node').innerHTML = '<option value="">自动调度（不指定）</option>';
@@ -678,14 +682,16 @@ function showPaiPreview() {
   const oss_options_json = (document.getElementById('pai-oss-options-json')?.value || '').trim();
   const enable_ssh = document.getElementById('pai-ssh-enabled')?.checked || false;
   const ssh_public_key = (document.getElementById('pai-ssh-key')?.value || '').trim();
+  const start_script = (document.getElementById('pai-start-script')?.value || '').trim();
 
-  if (!workspace_id)   { errEl.textContent = '请选择工作区'; return; }
+  if (!workspace_id)  { errEl.textContent = '请选择工作区'; return; }
   if (!owner_user_id)  { errEl.textContent = '请选择实例归属人'; return; }
   if (!instance_name)  { errEl.textContent = '请填写实例名称'; return; }
   if (!resource_id)    { errEl.textContent = '请选择资源池'; return; }
   if (!image_id)       { errEl.textContent = '请选择镜像'; return; }
   if (!cpu || !memory) { errEl.textContent = '请填写 CPU 核数和内存(GiB)'; return; }
   if (enable_ssh && !ssh_public_key) { errEl.textContent = '启用 SSH 需填写 SSH 公钥'; return; }
+  if (start_script.length > 8192) { errEl.textContent = '自定义启动脚本不能超过 8192 个字符'; return; }
   if (cpfs_enabled) {
     if (!cpfs_size_gib || !cpfs_file_count) { errEl.textContent = '挂载 CPFS 需填写容量(GiB)和文件数上限'; return; }
     if (Number(cpfs_size_gib) < 10) { errEl.textContent = 'CPFS 容量最小为 10 GiB'; return; }
@@ -730,7 +736,7 @@ function showPaiPreview() {
   }
 
   // 存下提交用的 payload
-  _paiPending = { region, workspace_id, owner_user_id, instance_name, image_id, dataset_ids, dataset_options, resource_id, resource_name, cpu, memory, gpu, shared_memory, system_disk_size, priority, node_name, cpfs_enabled, cpfs_size_gib, cpfs_file_count, oss_dataset_enabled, oss_dataset_access, oss_bucket, oss_prefix, oss_mount_path, oss_role_arn, oss_options_json, enable_ssh, ssh_public_key };
+  _paiPending = { region, workspace_id, owner_user_id, instance_name, image_id, dataset_ids, dataset_options, resource_id, resource_name, cpu, memory, gpu, shared_memory, system_disk_size, priority, node_name, cpfs_enabled, cpfs_size_gib, cpfs_file_count, oss_dataset_enabled, oss_dataset_access, oss_bucket, oss_prefix, oss_mount_path, oss_role_arn, oss_options_json, enable_ssh, ssh_public_key, start_script };
 
   // 渲染预览
   const spec = `${cpu} 核 / ${memory} GiB${gpu && Number(gpu) > 0 ? ' / ' + gpu + ' GPU' : ''}${shared_memory ? ' / 共享内存 ' + shared_memory + ' GiB' : ''}`;
@@ -764,13 +770,14 @@ function showPaiPreview() {
         ].filter(Boolean).join('；')]]
       : []),
     ['SSH 访问', enable_ssh ? `启用（内网 IP:22 直连）` : '否'],
+    ['自定义启动脚本', start_script || '无'],
   ];
   document.getElementById('pai-preview-body').innerHTML =
     '<div style="border:1px solid var(--g200);border-radius:8px;overflow:hidden">' +
     rows.map((r, i) => `
       <div style="display:flex;padding:8px 12px;font-size:13px;${i % 2 ? 'background:var(--g50)' : ''}">
         <div style="width:110px;color:var(--g500);flex-shrink:0">${esc(r[0])}</div>
-        <div style="flex:1;color:var(--g800);word-break:break-all">${esc(String(r[1]))}</div>
+        <div style="flex:1;color:var(--g800);word-break:break-all;white-space:pre-wrap">${esc(String(r[1]))}</div>
       </div>`).join('') + '</div>';
   document.getElementById('modal-pai-preview').classList.remove('hidden');
 }

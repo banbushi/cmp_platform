@@ -3137,6 +3137,17 @@
           <div style="font-size:11.5px;color:var(--g400);margin-top:5px">· 启用后实例挂入 VPC 内网，分配内网 IP，可通过 <code>ssh root@内网IP</code>（22 端口）直连。VPC 网络复用当前地域配置</div>
         </div>
       </div>
+      <div class="field" style="margin-top:14px">
+        <label for="pai-start-script" style="display:flex;justify-content:space-between;align-items:center">
+          <span>自定义启动脚本 (Shell)</span>
+          <span id="pai-start-script-count" style="font-size:11.5px;color:var(--g400);font-weight:normal">已输入：0 个字符</span>
+        </label>
+        <textarea id="pai-start-script" rows="6" spellcheck="false" maxlength="8192"
+          placeholder="# 可选，实例每次启动时执行，例如：&#10;pip install -r /mnt/data/requirements.txt"
+          oninput="document.getElementById('pai-start-script-count').textContent = '已输入：' + this.value.length + ' 个字符'"
+          style="margin-top:6px;width:100%;box-sizing:border-box;font-family:monospace;font-size:12px"></textarea>
+        <div style="font-size:11.5px;color:var(--g400);margin-top:5px">· 可选；实例启动时以 Shell 执行，留空则不设置</div>
+      </div>
       </div>
 
       <!-- 分组：存储与挂载 -->
