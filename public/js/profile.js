@@ -29,17 +29,15 @@ async function loadUserProfileInline(userId, container) {
   const { user, cloud_accounts, vpn_accounts, buckets, db_accounts, ticket_count } = r.data;
   const PLABEL = { aws: 'AWS', aliyun: '阿里云', baidu: '百度云' };
   const CLOUD_PLATFORMS = new Set(['aws', 'aliyun', 'baidu']);
-  const THIRD_PARTY_LABEL = { jumpserver: 'JumpServer', bytebase: 'Bytebase', kuboard: 'Kuboard' };
 
   const cloud_only = cloud_accounts.filter(a => CLOUD_PLATFORMS.has(a.platform));
-  const third_party = cloud_accounts.filter(a => !CLOUD_PLATFORMS.has(a.platform));
 
   let html = `<div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
     <button class="btn-ghost btn-sm" onclick="loadAccounts()" style="padding:5px 12px">← 返回列表</button>
     <h3 style="margin:0;font-size:16px;font-weight:600">${esc(user.real_name || user.name || user.email)} 的资源画像</h3>
   </div>`;
 
-  html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">`;
+  html += `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start">`;
 
   // 云账号卡片
   html += `<div class="card" style="padding:18px">
@@ -81,28 +79,6 @@ async function loadUserProfileInline(userId, container) {
         ${policyHtml}
         ${groupHtml}
         <div style="font-size:11px;color:var(--g400);margin-top:5px">${timeLabel}</div>
-      </div>`;
-    });
-  }
-  html += `</div>`;
-
-  // 平台工具账号卡片
-  html += `<div class="card" style="padding:18px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-      <span style="font-size:15px;font-weight:600">🛠️ 平台工具账号</span>
-      <span class="badge badge-info">${third_party.length}</span>
-    </div>`;
-  if (third_party.length === 0) {
-    html += `<div style="color:var(--g400);font-size:13px">暂无平台工具账号</div>`;
-  } else {
-    third_party.forEach(acc => {
-      const pname = THIRD_PARTY_LABEL[acc.platform] || acc.platform;
-      html += `<div style="padding:10px;background:var(--g50);border-radius:6px;margin-bottom:8px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span class="badge badge-purple">${esc(pname)}</span>
-          <code style="font-size:12px;background:var(--card);padding:2px 6px;border-radius:4px">${esc(acc.cloud_username)}</code>
-        </div>
-        <div style="font-size:11.5px;color:var(--g500)">创建时间：${acc.created_at.slice(0, 16)}</div>
       </div>`;
     });
   }
@@ -194,12 +170,10 @@ async function loadMyProfile(userId) {
 
   const PLABEL = { aws: 'AWS', aliyun: '阿里云', baidu: '百度云' };
   const CLOUD_PLATFORMS = new Set(['aws', 'aliyun', 'baidu']);
-  const THIRD_PARTY_LABEL = { jumpserver: 'JumpServer', bytebase: 'Bytebase', kuboard: 'Kuboard' };
 
   const cloud_only = cloud_accounts.filter(a => CLOUD_PLATFORMS.has(a.platform));
-  const third_party = cloud_accounts.filter(a => !CLOUD_PLATFORMS.has(a.platform));
 
-  let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">`;
+  let html = `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start">`;
 
   // 云账号卡片
   html += `<div class="card" style="padding:18px">
@@ -246,32 +220,6 @@ async function loadMyProfile(userId) {
         ${policyHtml}
         ${groupHtml}
         <div style="font-size:11px;color:var(--g400);margin-top:5px">${timeLabel}</div>
-      </div>`;
-    });
-  }
-  html += `</div>`;
-
-  // 平台工具账号卡片
-  html += `<div class="card" style="padding:18px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-      <span style="font-size:15px;font-weight:600">🛠️ 平台工具账号</span>
-      <span class="badge badge-info">${third_party.length}</span>
-    </div>`;
-  if (third_party.length === 0) {
-    html += `<div style="color:var(--g400);font-size:13px">暂无平台工具账号</div>`;
-  } else {
-    third_party.forEach(acc => {
-      const pname = THIRD_PARTY_LABEL[acc.platform] || acc.platform;
-      const enterBtn = !isViewingOther
-        ? `<button class="btn-ghost" style="font-size:11px;padding:2px 8px;margin-left:auto" onclick="ssoLogin('${acc.platform}')">进入控制台</button>`
-        : '';
-      html += `<div style="padding:10px;background:var(--g50);border-radius:6px;margin-bottom:8px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span class="badge badge-purple">${esc(pname)}</span>
-          <code style="font-size:12px;background:var(--card);padding:2px 6px;border-radius:4px">${esc(acc.cloud_username)}</code>
-          ${enterBtn}
-        </div>
-        <div style="font-size:11.5px;color:var(--g500)">创建时间：${acc.created_at.slice(0, 16)}</div>
       </div>`;
     });
   }
