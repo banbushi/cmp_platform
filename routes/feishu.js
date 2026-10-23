@@ -324,6 +324,19 @@ router.get('/my-tickets', authenticate, async (req, res) => {
  */
 router.post('/tickets', authenticate, async (req, res) => {
   const { ticket_type } = req.body;
+  const CLOUD_ACCOUNT_PLATFORMS = ['aws', 'aliyun', 'baidu'];
+
+  if (ticket_type === 'password_reset') {
+    const resetTarget = req.body.reset_target || {};
+    if (!['cloud', 'vpn'].includes(resetTarget.type)) {
+      return res.status(400).json({ error: '不支持的平台工具密码重置' });
+    }
+  } else if (Array.isArray(req.body.cloud_platforms)) {
+    const unsupported = req.body.cloud_platforms.filter(p => !CLOUD_ACCOUNT_PLATFORMS.includes(p));
+    if (unsupported.length) {
+      return res.status(400).json({ error: '平台工具账号申请已停用' });
+    }
+  }
 
   // ── 工单提交平台权限校验（密码重置跳过） ────────────────────────────────
   const userRole = await db.get('SELECT ticket_platforms FROM system_roles WHERE name = ?', [req.user.role]);
@@ -1095,14 +1108,13 @@ async function executeProvisioning(ticket, cfg, accountsOverride = null, options
     }
   }
 
-  // ── 2.8. 云主机创建 + JumpServer 纳管 ─────────────────────
+  // ── 2.8. 云主机创建 ─────────────────────
   const vmResults = [];
   const vmRequests = (draft.other_requests || []).filter(r => ['ec2', 'ecs', 'bcc'].includes(r.type));
   const vmConfigs = accountsOverride?.vm_configs || [];
 
   if (vmRequests.length > 0) {
     const { createAwsInstance, createAliyunInstance, createBaiduInstance } = require('./instances');
-    const { createJumpServerAsset, createAssetPermission, listJumpServerResource } = require('../utils/jumpserver');
 
     for (let idx = 0; idx < vmRequests.length; idx++) {
       const vm = vmRequests[idx];
@@ -1110,7 +1122,7 @@ async function executeProvisioning(ticket, cfg, accountsOverride = null, options
       // 审批时选择的 VPC/子网/安全组配置（附加到结果中，供"重试"时回填）
       const vmConfig = vmConfigs.find(c => c.index === idx);
       const savedConfig = vmConfig
-        ? { idx, vpcId: vmConfig.vpcId, subnetId: vmConfig.subnetId, securityGroupId: vmConfig.securityGroupId, addToJumpserver: vmConfig.addToJumpserver, jumpserverNodeId: vmConfig.jumpserverNodeId, jumpserverUserIds: vmConfig.jumpserverUserIds, jumpserverAccountTemplateIds: vmConfig.jumpserverAccountTemplateIds, jumpserverAccounts: vmConfig.jumpserverAccounts }
+        ? { idx, vpcId: vmConfig.vpcId, subnetId: vmConfig.subnetId, securityGroupId: vmConfig.securityGroupId }
         : { idx };
       const cred = await db.get('SELECT * FROM platform_credentials WHERE platform = ? AND enabled = 1', [platform]);
       if (!cred) {
@@ -1160,64 +1172,14 @@ async function executeProvisioning(ticket, cfg, accountsOverride = null, options
           continue;
         }
 
-        // 写入 cloud_instances 表，纳管到 JumpServer
+        // 写入 cloud_instances 表
         for (const inst of result.instances) {
           const localId = uuidv4();
           await db.run(
             'INSERT INTO cloud_instances (id, user_id, platform, instance_id, instance_name, status, region, zone, instance_type, image_id, public_ip, private_ip, config) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [localId, userId, platform, inst.instanceId, inst.instanceName || instance_name, inst.status || 'pending', inst.region || region || '', inst.zone || '', instance_type, image_id, inst.publicIp || '', inst.privateIp || '', JSON.stringify(inst.config || {})]
           );
-
-          // JumpServer 纳管（根据审批配置决定是否添加）
-          const shouldAddToJs = vmConfig ? vmConfig.addToJumpserver !== false : true;
           const ip = inst.privateIp || inst.publicIp;
-          if (ip && shouldAddToJs) {
-            const jsCred = await db.get("SELECT * FROM platform_credentials WHERE platform = 'jumpserver' AND enabled = 1");
-            if (jsCred) {
-              const assetRes = await createJumpServerAsset(jsCred, {
-                hostname: inst.instanceName || instance_name || inst.instanceId,
-                ip,
-                port: 22,
-                platform,
-                nodeId: vmConfig ? vmConfig.jumpserverNodeId : undefined,
-                accountTemplates: Array.isArray(vmConfig && vmConfig.jumpserverAccountTemplateIds)
-                  ? vmConfig.jumpserverAccountTemplateIds.filter(Boolean) : [],
-              });
-              if (assetRes.success && assetRes.assetId) {
-                await db.run('UPDATE cloud_instances SET jumpserver_asset_id = ? WHERE id = ?', [assetRes.assetId, localId]);
-
-                // 授权用户：优先用管理员在审批时选的用户；未选则回退申请人
-                try {
-                  let userIds = Array.isArray(vmConfig && vmConfig.jumpserverUserIds) ? vmConfig.jumpserverUserIds.filter(Boolean) : [];
-                  if (!userIds.length) {
-                    const jsUsername = draft.cloud_username || ticket.submitter_name;
-                    const { items } = await listJumpServerResource(jsCred, '/api/v1/users/users/', 1, 10, jsUsername);
-                    const jsUser = items.find(u => u.username === jsUsername);
-                    if (jsUser) userIds = [jsUser.id];
-                  }
-                  if (!userIds.length) {
-                    console.warn(`[vm] JumpServer 授权跳过：未找到可授权用户（asset=${assetRes.assetId}）`);
-                  } else {
-                    const jmsAccounts = Array.isArray(vmConfig && vmConfig.jumpserverAccounts)
-                      ? vmConfig.jumpserverAccounts.filter(Boolean) : [];
-                    const permRes = await createAssetPermission(jsCred, {
-                      name: `CMP-${inst.instanceName || inst.instanceId}-${Date.now().toString().slice(-6)}`,
-                      userIds,
-                      assets: [assetRes.assetId],
-                      accounts: jmsAccounts.length ? jmsAccounts : ['@ALL'],
-                    });
-                    if (permRes && permRes.success) {
-                      console.log(`[vm] JumpServer 授权成功：asset=${assetRes.assetId} users=${userIds.join(',')}`);
-                    } else {
-                      console.warn(`[vm] JumpServer 授权未成功：${permRes && permRes.message}`);
-                    }
-                  }
-                } catch (e) {
-                  console.warn(`[vm] JumpServer 授权失败: ${e.message}`);
-                }
-              }
-            }
-          }
 
           vmResults.push({
             platform,

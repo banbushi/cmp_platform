@@ -169,9 +169,6 @@ const ACTION_LABELS = {
   'DELETE /api/sync/groups/:platform/:groupName':    '删除云用户组',
 
   // 其他
-  'PUT /api/apply-config':                           '修改申请项配置',
-  'POST /api/feedback':                              '提交反馈',
-  'PUT /api/feedback/:id/reply':                     '回复反馈',
   'POST /api/oauth/clients':                         '创建 OAuth 客户端',
   'DELETE /api/oauth/clients/:id':                   '删除 OAuth 客户端',
 };
@@ -181,8 +178,8 @@ const MODULE_LABELS = {
   accounts: '账号', roles: '角色', cloud: '云凭据', sync: '同步',
   instances: '云主机', pai: 'PAI', rds: '数据库', bytebase: 'Bytebase',
   clusters: '集群', storage: '存储', jumpserver: '堡垒机', vpn: 'VPN',
-  feishu: '飞书', billing: '账单', feedback: '反馈', oauth: 'OAuth',
-  'apply-config': '申请项配置', audit: '审计', sso: 'SSO',
+  feishu: '飞书', billing: '账单', oauth: 'OAuth',
+  audit: '审计', sso: 'SSO',
 };
 
 const METHOD_VERB = { POST: '新增', PUT: '修改', PATCH: '修改', DELETE: '删除' };
@@ -190,7 +187,7 @@ const METHOD_VERB = { POST: '新增', PUT: '修改', PATCH: '修改', DELETE: '�
 // 同步类路径统一叫「同步」，比「新增 :platform」可读
 function fallbackAction(method, routeKeyPath, module) {
   const modLabel = MODULE_LABELS[module] || module || '';
-  // 取非参数段，并剔除 'api' 与模块自身段（否则会出现「修改申请项配置 apply-config」这种重复）
+  // 取非参数段，并剔除 'api' 与模块自身段，避免模块名重复出现
   const objSegs = String(routeKeyPath || '')
     .split('/')
     .filter(s => s && !s.startsWith(':') && s !== 'api' && s !== module);

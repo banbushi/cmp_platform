@@ -12,11 +12,7 @@ let credStatus = {};
 let _applyVis = { account: {}, resource: {}, vpn: {}, feature: {} };
 
 async function refreshApplyVisibility() {
-  const r = await get('/apply-config');
-  if (r.ok && r.data?.config) {
-    const c = r.data.config;
-    _applyVis = { account: c.account || {}, resource: c.resource || {}, vpn: c.vpn || {}, feature: c.feature || {} };
-  }
+  _applyVis = { account: {}, resource: {}, vpn: {}, feature: {} };
   return _applyVis;
 }
 
@@ -112,12 +108,12 @@ const GROUP_LABELS = {
 const SECTION_LABELS = {
   'apply-account': '账号申请', 'apply-resource': '资源申请', 'approval-tickets': '申请记录',
   'cloud-accounts': '云账号', create: '创建账号', groups: '组同步', policies: '策略管理',
-  instances: '云主机', clusters: '容器集群', 'pai-dsw': 'PAI DSW', jumpserver: '堡垒机管理',
+  instances: '云主机', clusters: '容器集群', 'pai-dsw': 'PAI DSW',
   'rds-mysql': 'MySQL 实例', 'rds-postgres': 'PostgreSQL 实例', 'rds-redis': 'Redis 实例',
   'security-groups': '安全组', vpcs: 'VPC', subnets: '子网', 'ssl-certs': 'SSL 证书', 'dns-records': 'DNS 解析', 'vpn-clients': 'VPN 客户端',
   disks: '磁盘', buckets: '对象存储', cpfs: 'CPFS 存储',
   'billing-aws': 'AWS 账单', 'billing-aliyun': '阿里云账单', 'billing-baidu': '百度云账单',
-  roles: '系统角色', 'admin-accounts': '系统账号', settings: '接入集成', 'apply-config': '申请项配置', audit: '操作审计', feedback: '反馈管理'
+  roles: '系统角色', 'admin-accounts': '系统账号', settings: '接入集成', audit: '操作审计'
 };
 
 // 角色对某个子菜单是否可见。
@@ -165,13 +161,11 @@ const SECTION_GROUP = {
   'my-tickets': 'tickets',
   'apply-account': 'tickets',
   'apply-resource': 'tickets',
-  'apply-config': 'system',
   'my-profile': 'profile',
   'perm-query': 'profile',
   instances: 'compute',
   clusters: 'compute',
   'pai-dsw': 'compute',
-  jumpserver: 'compute',
   'rds-mysql': 'database',
   'rds-postgres': 'database',
   'rds-redis': 'database',

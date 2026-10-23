@@ -78,8 +78,6 @@ function applyRolePermissions(roleData) {
   if (navProfile) navProfile.style.display = '';
   const navPermQuery = document.getElementById('nav-perm-query');
   if (navPermQuery) navPermQuery.style.display = '';
-  const navFeedback = document.getElementById('nav-feedback');
-  if (navFeedback) navFeedback.style.display = '';
   const isAdmin = body.classList.contains('role-admin');
   document.querySelectorAll('.perm-admin-nav').forEach(el => {
     el.style.display = isAdmin ? '' : 'none';

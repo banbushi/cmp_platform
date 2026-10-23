@@ -154,7 +154,6 @@
             <a class="nav-sub-link" data-section="instances" onclick="navTo('instances')">云主机</a>
             <a class="nav-sub-link" data-section="clusters"  onclick="navTo('clusters')">容器集群</a>
             <a class="nav-sub-link" data-section="pai-dsw"   onclick="navTo('pai-dsw')">PAI DSW</a>
-            <a class="nav-sub-link" data-section="jumpserver" onclick="navTo('jumpserver')">堡垒机管理</a>
           </div>
         </div>
 
@@ -223,18 +222,11 @@
             <a class="nav-sub-link" data-section="roles"         onclick="navTo('roles')">系统角色</a>
             <a class="nav-sub-link" data-section="admin-accounts" onclick="navTo('admin-accounts')">系统账号</a>
             <a class="nav-sub-link" data-section="settings"       onclick="navTo('settings')">接入集成</a>
-            <a class="nav-sub-link" data-section="apply-config"   onclick="navTo('apply-config')">申请项配置</a>
             <a class="nav-sub-link" data-section="audit"          onclick="navTo('audit')">操作审计</a>
-            <a class="nav-sub-link" data-section="feedback"       onclick="navTo('feedback')">反馈管理</a>
           </div>
         </div>
       </nav>
-      <div id="nav-feedback" style="display:none;padding:8px 16px;margin-top:auto">
-        <a onclick="navTo('feedback')" data-section="feedback" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--g400);transition:background .2s"
-          onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''">
-          <span style="font-size:15px">💬</span> 建议反馈
-        </a>
-      </div>
+
       <div class="sidebar-user">
         <div class="avatar" id="nav-avatar">A</div>
         <div class="user-text">
@@ -731,19 +723,6 @@
           <div id="pai-loading" class="sync-loading hidden"><div class="spin"></div> 正在加载 DSW 实例...</div>
           <div id="pai-table-wrap"></div>
         </div>
-      </section>
-
-      <!-- 堡垒机管理 -->
-      <section id="sec-jumpserver" class="sec hidden">
-        <div class="sec-header">
-          <div><h2>堡垒机管理</h2><p class="sub">JumpServer 用户组、资产与用户管理</p></div>
-        </div>
-        <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border)">
-          <button id="js-tab-groups" class="filter-tab active" onclick="jsTabSwitch('groups')">用户组</button>
-          <button id="js-tab-assets" class="filter-tab" onclick="jsTabSwitch('assets')">资产</button>
-          <button id="js-tab-users" class="filter-tab" onclick="jsTabSwitch('users')">用户</button>
-        </div>
-        <div id="jumpserver-wrap"></div>
       </section>
 
       <!-- MySQL 实例 -->
@@ -1515,42 +1494,6 @@
 
       </section>
 
-      <!-- 申请项配置 -->
-      <section id="sec-apply-config" class="sec hidden">
-        <div class="sec-header">
-          <div><h2>申请项配置</h2><p class="sub">控制「工单申请」中账号申请（云账号 / VPN 账号 / 平台工具账号）、资源申请的资源类型是否对用户展示</p></div>
-          <div style="display:flex;gap:8px">
-            <button class="btn-primary" onclick="saveApplyConfig()">保存配置</button>
-          </div>
-        </div>
-        <div class="card" style="margin-bottom:16px">
-          <div style="font-size:15px;font-weight:600;margin-bottom:4px">账号申请</div>
-          <div style="font-size:12.5px;color:var(--g500);margin-bottom:16px">关闭后，用户在「账号申请」页对应分类下将看不到该平台</div>
-
-          <div style="margin-bottom:18px">
-            <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:8px">云账号</div>
-            <div id="ac-cloud-switches"></div>
-          </div>
-          <div style="margin-bottom:18px">
-            <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:8px">VPN 账号</div>
-            <div id="ac-vpn-switches"></div>
-          </div>
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:8px">平台工具账号</div>
-            <div id="ac-tool-switches"></div>
-          </div>
-        </div>
-        <div class="card" style="margin-bottom:16px">
-          <div style="font-size:15px;font-weight:600;margin-bottom:4px">资源申请 — 资源类型</div>
-          <div style="font-size:12.5px;color:var(--g500);margin-bottom:14px">关闭后，用户在「资源申请」页对应云平台下将看不到该资源类型</div>
-          <div id="ac-resource-switches"></div>
-        </div>
-        <div class="card">
-          <div style="font-size:15px;font-weight:600;margin-bottom:4px">功能入口</div>
-          <div style="font-size:12.5px;color:var(--g500);margin-bottom:14px">关闭后，该功能的菜单项对所有人隐藏（含管理员），且无法通过链接直接访问</div>
-          <div id="ac-feature-switches"></div>
-        </div>
-      </section>
 
       <!-- 操作审计（仅管理员） -->
       <section id="sec-audit" class="sec hidden">
@@ -1605,7 +1548,7 @@
       <!-- 工单申请：提交申请 -->
       <section id="sec-apply-account" class="sec hidden">
         <div class="sec-header">
-          <div><h2>账号申请</h2><p class="sub">申请云账号、平台工具账号，或重置已有账号密码，由管理员审批后执行</p></div>
+          <div><h2>账号申请</h2><p class="sub">申请云账号、VPN 账号，或重置已有账号密码，由管理员审批后执行</p></div>
         </div>
 
         <!-- 申请人信息（从账号资料读取） -->
@@ -1616,7 +1559,7 @@
           <div id="at-profile-info"><!-- JS 填充 --></div>
         </div>
 
-        <!-- 初始密码（仅云账号 / 平台工具申请时需要，密码重置 Tab 隐藏） -->
+        <!-- 初始密码（仅云账号 / VPN 申请时需要，密码重置 Tab 隐藏） -->
         <div class="card" id="at-initial-password-card" style="margin-bottom:16px">
           <div class="form-row">
             <div class="field" style="flex:1">
@@ -1638,10 +1581,6 @@
           <button id="at-tab-btn-vpn" onclick="atSwitchTab('vpn')"
             style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--g500);margin-bottom:-2px">
             VPN 申请
-          </button>
-          <button id="at-tab-btn-system" onclick="atSwitchTab('system')"
-            style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--g500);margin-bottom:-2px">
-            平台工具申请
           </button>
           <button id="at-tab-btn-reset" onclick="atSwitchTab('reset')"
             style="padding:9px 20px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:var(--g500);margin-bottom:-2px">
@@ -1712,98 +1651,6 @@
           </div>
         </div>
 
-        <!-- Tab2：平台工具申请（主机 / 数据库 / 集群 / 监控） -->
-        <div id="at-panel-system" class="card hidden" style="margin-bottom:16px;padding:16px;border-top-left-radius:0">
-
-          <!-- 主机 -->
-          <div id="at-sysgroup-host" style="margin-bottom:20px">
-            <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">主机</div>
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <label id="at-opt-jumpserver" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'jumpserver')">
-                <input type="checkbox" id="at-chk-jumpserver" value="jumpserver" style="flex-shrink:0;margin-top:3px">
-                <div style="width:36px;height:36px;background:#e65c00;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">JS</div>
-                <div style="flex:1">
-                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">JumpServer 堡垒机</div>
-                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请堡垒机账号，用于安全登录内网服务器</div>
-                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-jumpserver"></div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <!-- 数据库 -->
-          <div id="at-sysgroup-db" style="margin-bottom:20px">
-            <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">数据库</div>
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <label id="at-opt-bytebase" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'bytebase')">
-                <input type="checkbox" id="at-chk-bytebase" value="bytebase" style="flex-shrink:0;margin-top:3px">
-                <div style="width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0" class="bb-bg">BB</div>
-                <div style="flex:1">
-                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Bytebase</div>
-                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请 Bytebase 账号，用于数据库变更管理与审计</div>
-                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-bytebase"></div>
-                  <div id="at-bb-instance-wrap" class="hidden" style="margin-top:10px" onclick="event.stopPropagation()">
-                    <label style="font-size:12px;color:var(--g600);display:block;margin-bottom:4px">选择 Bytebase 实例</label>
-                    <select id="at-bb-instance" style="width:100%;max-width:320px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
-                      <option value="">加载中...</option>
-                    </select>
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <!-- 集群 -->
-          <div id="at-sysgroup-cluster" style="margin-bottom:20px">
-            <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">集群</div>
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <label id="at-opt-kuboard" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'kuboard')">
-                <input type="checkbox" id="at-chk-kuboard" value="kuboard" style="flex-shrink:0;margin-top:3px">
-                <div style="width:36px;height:36px;background:#0052cc;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">KB</div>
-                <div style="flex:1">
-                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Kuboard 容器管理</div>
-                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请 Kuboard 账号，用于 Kubernetes 集群可视化管理</div>
-                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-kuboard"></div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <!-- 监控 -->
-          <div id="at-sysgroup-monitor">
-            <div style="font-size:12px;font-weight:700;color:var(--g500);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">监控</div>
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <label id="at-opt-grafana-aws" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'grafana-aws')">
-                <input type="checkbox" id="at-chk-grafana-aws" value="grafana-aws" style="flex-shrink:0;margin-top:3px">
-                <div style="width:36px;height:36px;background:#ff6f00;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">GF</div>
-                <div style="flex:1">
-                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Grafana (AWS)</div>
-                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请 AWS 环境 Grafana 账号，用于查看监控仪表盘</div>
-                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-grafana-aws"></div>
-                </div>
-              </label>
-              <label id="at-opt-grafana-wuwen" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'grafana-wuwen')">
-                <input type="checkbox" id="at-chk-grafana-wuwen" value="grafana-wuwen" style="flex-shrink:0;margin-top:3px">
-                <div style="width:36px;height:36px;background:#2e7d32;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">GF</div>
-                <div style="flex:1">
-                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Grafana (无问)</div>
-                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请无问环境 Grafana 账号，用于查看监控仪表盘</div>
-                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-grafana-wuwen"></div>
-                </div>
-              </label>
-              <label id="at-opt-grafana-baidu" style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .15s;border-left:3px solid transparent" onclick="atSysOptClick(event,'grafana-baidu')">
-                <input type="checkbox" id="at-chk-grafana-baidu" value="grafana-baidu" style="flex-shrink:0;margin-top:3px">
-                <div style="width:36px;height:36px;background:#1565c0;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">GF</div>
-                <div style="flex:1">
-                  <div style="font-size:14px;font-weight:600;color:var(--g900);margin-bottom:3px">Grafana (百度)</div>
-                  <div style="font-size:12.5px;color:var(--g500);line-height:1.5">申请百度云环境 Grafana 账号，用于查看监控仪表盘</div>
-                  <div style="font-size:11px;color:var(--warn);margin-top:4px" id="at-badge-grafana-baidu"></div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-        </div>
 
         <!-- Tab3：密码重置 -->
         <div id="at-panel-reset" class="card hidden" style="margin-bottom:16px;padding:20px;border-top-left-radius:0">
@@ -1828,14 +1675,7 @@
                   <div style="font-size:12px;color:var(--g500);margin-top:2px">VPN 客户端登录密码</div>
                 </div>
               </div>
-              <div id="at-reset-card-system" onclick="atResetTypeChange('system')"
-                style="flex:1;display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;user-select:none">
-                <div style="width:38px;height:38px;background:#7c3aed;color:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">SYS</div>
-                <div>
-                  <div style="font-size:14px;font-weight:600;color:var(--g900)">平台工具</div>
-                  <div style="font-size:12px;color:var(--g500);margin-top:2px">JumpServer / Bytebase / Grafana</div>
-                </div>
-              </div>
+
             </div>
           </div>
 
@@ -1878,21 +1718,7 @@
             </div>
           </div>
 
-          <!-- 平台工具重置表单 -->
-          <div id="at-reset-system-form" class="hidden">
-            <div class="field">
-              <label>平台工具 <span class="req">*</span></label>
-              <select id="at-reset-system-tool">
-                <option value="">请选择</option>
-                <option value="jumpserver">JumpServer 堡垒机</option>
-                <option value="bytebase">Bytebase 数据库管理</option>
-                <option value="kuboard">Kuboard 容器管理</option>
-                <option value="grafana-aws">Grafana (AWS)</option>
-                <option value="grafana-wuwen">Grafana (无问)</option>
-                <option value="grafana-baidu">Grafana (百度)</option>
-              </select>
-            </div>
-          </div>
+
 
           <!-- 新密码 -->
           <div class="form-row" style="margin-top:16px">
@@ -2012,15 +1838,6 @@
         <div id="tickets-wrap"></div>
       </section>
 
-      <!-- 建议反馈 -->
-      <section id="sec-feedback" class="sec hidden">
-        <div class="sec-header">
-          <div><h2>建议反馈</h2><p class="sub">提交平台改进建议或问题反馈，帮助我们做得更好</p></div>
-        </div>
-        <div id="feedback-form-area"></div>
-        <div id="feedback-loading" class="sync-loading hidden"><div class="spin"></div> 加载中...</div>
-        <div id="feedback-list"></div>
-      </section>
 
       <!-- 飞书集成配置 -->
     </main>
@@ -2607,7 +2424,6 @@
 <script src="/js/network.js"></script>
 <script src="/js/clusters.js"></script>
 <script src="/js/pai.js"></script>
-<script src="/js/jumpserver.js"></script>
 <script src="/js/rds-instances.js"></script>
 <script src="/js/storage.js"></script>
 <script src="/js/buckets.js"></script>
@@ -2617,11 +2433,9 @@
 <script src="/js/admin.js"></script>
 <script src="/js/settings.js"></script>
 <script src="/js/tickets.js"></script>
-<script src="/js/apply-config.js"></script>
 <script src="/js/audit.js"></script>
 <script src="/js/profile.js"></script>
 <script src="/js/perm-query.js"></script>
-<script src="/js/feedback.js"></script>
 
 
 <!-- Bucket 授权弹窗 -->

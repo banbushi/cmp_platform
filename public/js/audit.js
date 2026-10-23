@@ -21,8 +21,8 @@ const MODULE_LABELS_FE = {
   accounts: '账号', roles: '角色', cloud: '云凭据', sync: '同步',
   instances: '云主机', pai: 'PAI', rds: '数据库', bytebase: 'Bytebase',
   clusters: '集群', storage: '存储', jumpserver: '堡垒机', vpn: 'VPN',
-  feishu: '飞书', billing: '账单', feedback: '反馈', oauth: 'OAuth',
-  'apply-config': '申请项配置', audit: '审计', sso: 'SSO',
+  feishu: '飞书', billing: '账单', oauth: 'OAuth',
+  audit: '审计', sso: 'SSO',
 };
 
 function _auditQuery() {

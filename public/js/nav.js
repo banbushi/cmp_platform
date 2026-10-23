@@ -4,6 +4,9 @@
 
 function navTo(section) {
   if (section === 'third-accounts') section = 'cloud-accounts';
+  if (section === 'jumpserver') section = 'instances';
+  if (section === 'apply-config') section = 'settings';
+  if (section === 'feedback') section = 'my-profile';
   if (section !== 'overview' && section !== 'my-profile' && section !== 'perm-query' && _myRoleData) {
     if (!roleHasSection(_myRoleData, section)) {
       section = 'my-profile';
@@ -17,7 +20,7 @@ function navTo(section) {
   if (section === 'overview' && _myRoleData && !canViewOverview()) {
     section = defaultSection() === 'overview' ? 'my-profile' : defaultSection();
   }
-  if (section !== 'feedback') localStorage.setItem('lastSection', section);
+  localStorage.setItem('lastSection', section);
   location.hash = `section=${section}`;
   const secId = SEC_ID_MAP[section] || section;
   document.querySelectorAll('.sec').forEach(s => s.classList.add('hidden'));
@@ -42,7 +45,6 @@ function navTo(section) {
   else if (section === 'instances') loadInstances();
   else if (section === 'clusters') loadClusters();
   else if (section === 'pai-dsw') loadPaiDsw();
-  else if (section === 'jumpserver') loadJumpServer();
   else if (section === 'rds-mysql') loadRdsInstances();
   else if (section === 'rds-postgres') loadRdsInstances();
   else if (section === 'rds-redis') loadRdsInstances();
@@ -51,7 +53,6 @@ function navTo(section) {
   else if (section === 'subnets') loadSubnets();
   else if (section === 'vpn-clients') loadVpnClients();
   else if (section === 'settings') loadSettings();
-  else if (section === 'apply-config') loadApplyConfig();
   else if (section === 'audit') loadAudit();
   else if (section === 'admin-accounts') loadAdminAccounts();
   else if (section === 'roles') loadRoles();
@@ -61,7 +62,6 @@ function navTo(section) {
   else if (section === 'apply-resource') initApplyResource();
   else if (section === 'my-profile') loadMyProfile();
   else if (section === 'perm-query') loadPermQuery();
-  else if (section === 'feedback') loadFeedback();
   else if (section === 'feishu-config') { switchIntegrationTab('feishu'); loadFeishuConfig(); }
   else if (section === 'ssl-certs') loadCerts();
   else if (section === 'dns-records') loadDnsRecords();

@@ -17,8 +17,7 @@ const MENU_CATALOG = [
   { group: 'compute',  label: '计算资源', children: [
     { section: 'instances', label: '云主机' },
     { section: 'clusters', label: '容器集群' },
-    { section: 'pai-dsw', label: 'PAI DSW' },
-    { section: 'jumpserver', label: '堡垒机管理' }
+    { section: 'pai-dsw', label: 'PAI DSW' }
   ]},
   { group: 'database', label: '数据库资源', children: [
     { section: 'rds-mysql', label: 'MySQL 实例' },
@@ -47,9 +46,7 @@ const MENU_CATALOG = [
     { section: 'roles', label: '系统角色' },
     { section: 'admin-accounts', label: '系统账号' },
     { section: 'settings', label: '接入集成' },
-    { section: 'apply-config', label: '申请项配置' },
-    { section: 'audit', label: '操作审计' },
-    { section: 'feedback', label: '反馈管理' }
+    { section: 'audit', label: '操作审计' }
   ]}
 ];
 

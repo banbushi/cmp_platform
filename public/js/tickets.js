@@ -1112,32 +1112,6 @@ async function openApproveModal(ticketId) {
                 <span>分配公网 IP${r.public_ip ? '（申请人已勾选）' : '（申请人未勾选，如需可手动开启）'}</span>
               </label>
             </div>
-            <div style="margin-top:10px">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-                <input type="checkbox" id="ta-vm-jumpserver-${idx}" checked onchange="taJmsToggle(${idx})">
-                <span>创建后添加到 JumpServer 并授权给申请人</span>
-              </label>
-              <div style="margin-top:6px;padding-left:24px">
-                <label style="font-size:12px;color:var(--g500)">资产树节点(组)</label>
-                <select id="ta-vm-jms-node-${idx}" style="width:100%;font-size:12px;margin-top:2px">
-                  <option value="">默认（不指定）</option>
-                </select>
-              </div>
-              <div style="margin-top:8px;padding-left:24px">
-                <label style="font-size:12px;color:var(--g500)">系统账号模版（建资产时自动在主机上创建账号）</label>
-                <select id="ta-vm-jms-account-${idx}" multiple size="3" style="width:100%;font-size:12px;margin-top:2px">
-                  <option value="">加载中...</option>
-                </select>
-                <div style="font-size:11px;color:var(--g400);margin-top:2px">按住 Ctrl/Cmd 多选。套用模版后 JumpServer 会自动在主机上建对应账号并授权；不选则授权资产下全部账号(@ALL)。</div>
-              </div>
-              <div style="margin-top:8px;padding-left:24px">
-                <label style="font-size:12px;color:var(--g500)">授权给用户（多选，默认申请人）</label>
-                <input type="text" id="ta-vm-jms-user-search-${idx}" placeholder="🔍 搜索用户名..." style="width:100%;font-size:12px;margin-top:2px" oninput="_taFilterJmsUsers(${idx})">
-                <div id="ta-vm-jms-users-${idx}" style="max-height:120px;overflow:auto;border:1px solid var(--g200);border-radius:6px;padding:6px 8px;margin-top:4px">
-                  <div style="color:var(--g400);font-size:12px">加载中...</div>
-                </div>
-              </div>
-            </div>
           </div>`;
       });
     }
@@ -1207,19 +1181,7 @@ async function openApproveModal(ticketId) {
   const vmReqsForSg = (draft.other_requests || []).filter(r => ['ec2','ecs','bcc'].includes(r.type));
   vmReqsForSg.forEach((r, idx) => {
     const saved = savedVmConfigs[idx];
-    // 恢复 JumpServer 勾选状态
-    if (saved && saved.addToJumpserver === false) {
-      const jsEl = document.getElementById(`ta-vm-jumpserver-${idx}`);
-      if (jsEl) jsEl.checked = false;
-    }
     _taLoadVpcs(r.platform, r.region, idx, saved);
-    // 加载 JumpServer 资产树节点（回填上次选择）+ 联动禁用
-    _taLoadJmsNodes(idx, saved && saved.jumpserverNodeId);
-    // 加载授权用户多选（回填上次选择，无则默认申请人）
-    _taLoadJmsUsers(idx, saved && saved.jumpserverUserIds, draft.cloud_username || ticket.submitter_name);
-    // 加载账号模版多选（回填上次选择的模版 id，无则按平台默认用户名匹配）
-    _taLoadJmsAccountTemplates(idx, saved && saved.jumpserverAccountTemplateIds, r.platform === 'aws' ? 'ec2-user' : 'root');
-    taJmsToggle(idx);
   });
 
   const btn = document.getElementById('ta-btn-submit');
@@ -1301,11 +1263,6 @@ function _taCollectConfig() {
     vpcId: document.getElementById(`ta-vm-vpc-${idx}`)?.value || '',
     subnetId: document.getElementById(`ta-vm-subnet-${idx}`)?.value || '',
     securityGroupId: document.getElementById(`ta-vm-sg-${idx}`)?.value || '',
-    addToJumpserver: document.getElementById(`ta-vm-jumpserver-${idx}`)?.checked ?? true,
-    jumpserverNodeId: document.getElementById(`ta-vm-jms-node-${idx}`)?.value || '',
-    jumpserverUserIds: _taGetJmsUserIds(idx),
-    jumpserverAccountTemplateIds: _taGetJmsAccountTemplates(idx).templateIds,
-    jumpserverAccounts: _taGetJmsAccountTemplates(idx).usernames,
     publicIp: document.getElementById(`ta-vm-pubip-${idx}`)?.checked || false,
     systemDiskSize: parseInt(document.getElementById(`ta-vm-sysdisk-${idx}`)?.value) || 40,
     dataDiskSize: parseInt(document.getElementById(`ta-vm-datadisk-${idx}`)?.value) || 0,
@@ -1808,22 +1765,16 @@ async function submitTicketApproval() {
     if (!ra.databases.length) { errEl.textContent = `${PSHORT_S[ra.platform] || ra.platform} RDS：请填写数据库名称`; return; }
   }
 
-  // 收集云主机配置（VPC、子网、安全组、JumpServer选项）
+  // 收集云主机配置（VPC、子网、安全组、公网 IP、磁盘）
   const vmReqsFromDraft = (draft.other_requests || []).filter(r => ['ec2','ecs','bcc'].includes(r.type));
   const vm_configs = vmReqsFromDraft.map((r, idx) => {
     const vpcId = document.getElementById(`ta-vm-vpc-${idx}`)?.value || '';
     const subnetId = document.getElementById(`ta-vm-subnet-${idx}`)?.value || '';
     const sgId = document.getElementById(`ta-vm-sg-${idx}`)?.value || '';
-    const addToJumpserver = document.getElementById(`ta-vm-jumpserver-${idx}`)?.checked ?? true;
-    const jumpserverNodeId = document.getElementById(`ta-vm-jms-node-${idx}`)?.value || '';
-    const jumpserverUserIds = _taGetJmsUserIds(idx);
-    const _jmsTpl = _taGetJmsAccountTemplates(idx);
-    const jumpserverAccountTemplateIds = _jmsTpl.templateIds;
-    const jumpserverAccounts = _jmsTpl.usernames;
     const publicIp = document.getElementById(`ta-vm-pubip-${idx}`)?.checked || false;
     const systemDiskSize = parseInt(document.getElementById(`ta-vm-sysdisk-${idx}`)?.value) || 40;
     const dataDiskSize = parseInt(document.getElementById(`ta-vm-datadisk-${idx}`)?.value) || 0;
-    return { index: idx, platform: r.platform, vpcId, subnetId, securityGroupId: sgId, addToJumpserver, jumpserverNodeId, jumpserverUserIds, jumpserverAccountTemplateIds, jumpserverAccounts, publicIp, systemDiskSize, dataDiskSize };
+    return { index: idx, platform: r.platform, vpcId, subnetId, securityGroupId: sgId, publicIp, systemDiskSize, dataDiskSize };
   });
   for (const vc of vm_configs) {
     if (!vc.vpcId) { errEl.textContent = `${PSHORT_S[vc.platform] || vc.platform} 云主机：请选择 VPC`; return; }
@@ -1926,7 +1877,7 @@ async function submitApproval() {
 
 let atCredStatus      = {};
 const atCheckedRes    = { aws: new Set(), aliyun: new Set(), baidu: new Set() };
-let atCurrentTab      = 'cloud'; // 'cloud' | 'vpn' | 'system' | 'reset'
+let atCurrentTab      = 'cloud'; // 'cloud' | 'vpn' | 'reset'
 
 function atGeneratePassword() {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -1951,7 +1902,7 @@ function atGeneratePassword() {
 function atSwitchTab(tab) {
   atCurrentTab = tab;
   // Tab 按钮样式
-  const tabs = ['cloud', 'vpn', 'system', 'reset'];
+  const tabs = ['cloud', 'vpn', 'reset'];
   tabs.forEach(t => {
     const btn = document.getElementById(`at-tab-btn-${t}`);
     if (!btn) return;
@@ -1961,9 +1912,8 @@ function atSwitchTab(tab) {
   // 面板显示
   document.getElementById('at-panel-cloud').classList.toggle('hidden',  tab !== 'cloud');
   document.getElementById('at-panel-vpn').classList.toggle('hidden',    tab !== 'vpn');
-  document.getElementById('at-panel-system').classList.toggle('hidden', tab !== 'system');
   document.getElementById('at-panel-reset').classList.toggle('hidden',  tab !== 'reset');
-  // 初始密码卡：仅新建账号（云账号 / VPN / 平台工具）需要，密码重置 Tab 隐藏避免与「新密码」混淆
+  // 初始密码卡：仅新建账号（云账号 / VPN）需要，密码重置 Tab 隐藏避免与「新密码」混淆
   const initPwCard = document.getElementById('at-initial-password-card');
   if (initPwCard) initPwCard.classList.toggle('hidden', tab === 'reset');
   // 提交按钮文案
@@ -1979,13 +1929,6 @@ function atSwitchTab(tab) {
     atUpdateCol1Styles();
     atUpdateIamNotesArea();
   };
-  const clearSys = () => {
-    ['jumpserver', 'bytebase', 'kuboard', 'grafana-aws', 'grafana-wuwen', 'grafana-baidu'].forEach(p => {
-      const chk = document.getElementById(`at-chk-${p}`);
-      if (chk) chk.checked = false;
-      atSysUpdateStyle(p);
-    });
-  };
   const clearVpn = () => {
     ['aliyun','baidu'].forEach(p => {
       const chk = document.getElementById(`at-vpn-chk-${p}`);
@@ -1996,7 +1939,6 @@ function atSwitchTab(tab) {
   // 只清空非当前 tab 的选中，当前 tab 的选择保留
   if (tab !== 'cloud') clearCloud();
   if (tab !== 'vpn')   clearVpn();
-  if (tab !== 'system') clearSys();
   document.getElementById('at-err').textContent = '';
 }
 
@@ -2020,46 +1962,6 @@ function atVpnUpdateStyle(platform) {
   }
 }
 
-function atSysOptClick(event, platform) {
-  if (event.target.tagName === 'INPUT') {
-    atSysUpdateStyle(platform);
-    return;
-  }
-  const chk = document.getElementById(`at-chk-${platform}`);
-  if (chk) { chk.checked = !chk.checked; atSysUpdateStyle(platform); }
-}
-
-function atSysUpdateStyle(platform) {
-  const optEl = document.getElementById(`at-opt-${platform}`);
-  const chk   = document.getElementById(`at-chk-${platform}`);
-  if (!optEl) return;
-  if (chk?.checked) {
-    optEl.style.background      = 'var(--blue-50, #eff6ff)';
-    optEl.style.borderLeftColor = 'var(--primary, #2563eb)';
-  } else {
-    optEl.style.background      = '';
-    optEl.style.borderLeftColor = 'transparent';
-  }
-  // Bytebase：勾选后展示实例选择器
-  if (platform === 'bytebase') {
-    const wrap = document.getElementById('at-bb-instance-wrap');
-    if (wrap) wrap.classList.toggle('hidden', !chk?.checked);
-  }
-}
-
-// 加载启用的 Bytebase 实例到申请页下拉
-async function atLoadBytebaseInstances() {
-  const sel = document.getElementById('at-bb-instance');
-  if (!sel) return;
-  const r = await get('/bytebase/instances?enabledOnly=1');
-  const list = (r.ok && r.data.instances) ? r.data.instances : [];
-  if (!list.length) {
-    sel.innerHTML = '<option value="">（暂无可用实例，请联系管理员配置）</option>';
-    return;
-  }
-  sel.innerHTML = list.map(i => `<option value="${i.id}">${esc(i.name)}（${esc(i.base_url)}）</option>`).join('');
-}
-
 // ── 密码重置 Tab ─────────────────────────────────────────────────────────────
 
 let atResetCurrentType = null;
@@ -2067,7 +1969,7 @@ let atResetCurrentType = null;
 function atResetTypeChange(type) {
   atResetCurrentType = type;
   // 卡片高亮
-  ['cloud', 'vpn', 'system'].forEach(t => {
+  ['cloud', 'vpn'].forEach(t => {
     const card = document.getElementById(`at-reset-card-${t}`);
     if (!card) return;
     if (t === type) {
@@ -2083,7 +1985,6 @@ function atResetTypeChange(type) {
   // 子表单显示
   document.getElementById('at-reset-cloud-form').classList.toggle('hidden', type !== 'cloud');
   document.getElementById('at-reset-vpn-form').classList.toggle('hidden',   type !== 'vpn');
-  document.getElementById('at-reset-system-form').classList.toggle('hidden', type !== 'system');
   // 重置各表单
   if (type === 'cloud') {
     document.getElementById('at-reset-cloud-platform').value = '';
@@ -2093,8 +1994,6 @@ function atResetTypeChange(type) {
   } else if (type === 'vpn') {
     document.getElementById('at-reset-vpn-platform').value = '';
     document.getElementById('at-reset-vpn-client').value = '';
-  } else if (type === 'system') {
-    document.getElementById('at-reset-system-tool').value = '';
   }
 }
 
@@ -2295,7 +2194,7 @@ async function initApplyAccount() {
   await refreshApplyVisibility();
 
   // 重置所有平台选择 + 按可见性配置显隐
-  ['aws','aliyun','baidu','jumpserver','bytebase','kuboard','grafana-aws','grafana-wuwen','grafana-baidu'].forEach(p => {
+  ['aws','aliyun','baidu'].forEach(p => {
     const chk = document.getElementById(`at-chk-${p}`);
     if (chk) chk.checked = false;
     const badge = document.getElementById(`at-badge-${p}`);
@@ -2307,8 +2206,6 @@ async function initApplyAccount() {
     }
   });
 
-  // 平台工具分组：整组被隐藏时连标题一起隐藏
-  atUpdateSysGroupVisibility();
 
   // 根据工单平台权限禁用不可选的云平台
   ['aws','aliyun','baidu'].forEach(p => {
@@ -2356,15 +2253,6 @@ async function initApplyAccount() {
     }
   });
 
-  // Bytebase 实例下拉：加载启用实例，隐藏选择器（勾选后才展示）。徽章按有无实例提示
-  atLoadBytebaseInstances().then(() => {
-    const sel = document.getElementById('at-bb-instance');
-    const bbBadge = document.getElementById('at-badge-bytebase');
-    const hasInst = sel && [...sel.options].some(o => o.value);
-    if (bbBadge) { bbBadge.textContent = hasInst ? '' : '未配置实例'; bbBadge.style.color = hasInst ? '' : 'var(--warn)'; }
-  });
-  const bbWrap = document.getElementById('at-bb-instance-wrap');
-  if (bbWrap) bbWrap.classList.add('hidden');
 
   // 重置到云资源 Tab
   atCurrentTab = 'cloud';
@@ -2374,11 +2262,11 @@ async function initApplyAccount() {
 
   // 重置密码重置 Tab
   atResetCurrentType = null;
-  ['cloud', 'vpn', 'system'].forEach(t => {
+  ['cloud', 'vpn'].forEach(t => {
     const card = document.getElementById(`at-reset-card-${t}`);
     if (card) { card.style.borderColor = ''; card.style.background = ''; card.style.boxShadow = ''; }
   });
-  ['at-reset-cloud-form','at-reset-vpn-form','at-reset-system-form'].forEach(id => {
+  ['at-reset-cloud-form','at-reset-vpn-form'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
@@ -2403,22 +2291,6 @@ async function initApplyAccount() {
   loadAvailableWorkflows('at', 'account');
 }
 
-// 平台工具 Tab 的分组：整组平台都不可见时，隐藏该分组容器（含标题）
-const _AT_SYS_GROUPS = {
-  'at-sysgroup-host':    ['jumpserver'],
-  'at-sysgroup-db':      ['bytebase'],
-  'at-sysgroup-cluster': ['kuboard'],
-  'at-sysgroup-monitor': ['grafana-aws', 'grafana-wuwen', 'grafana-baidu'],
-};
-
-function atUpdateSysGroupVisibility() {
-  Object.entries(_AT_SYS_GROUPS).forEach(([groupId, platforms]) => {
-    const groupEl = document.getElementById(groupId);
-    if (!groupEl) return;
-    const anyVisible = platforms.some(isAccountPlatformVisible);
-    groupEl.style.display = anyVisible ? '' : 'none';
-  });
-}
 
 const _AT_SHORT_LABELS = { aws: 'AWS', aliyun: '阿里云', baidu: '百度云' };
 
@@ -3741,10 +3613,9 @@ async function submitApplyAccount() {
       if (!platform) { errEl.textContent = '请选择云平台'; return; }
       if (!client) { errEl.textContent = '请选择 VPN 客户端'; return; }
       resetTarget = { type: 'vpn', platform, client };
-    } else if (resetType === 'system') {
-      const tool = document.getElementById('at-reset-system-tool').value;
-      if (!tool) { errEl.textContent = '请选择平台工具'; return; }
-      resetTarget = { type: 'system', tool };
+    } else {
+      errEl.textContent = '不支持的账号类型';
+      return;
     }
 
     btn.disabled = true; btn.textContent = '提交中...';
@@ -3804,7 +3675,6 @@ async function submitApplyAccount() {
   const iam_notes      = {};
   const vpn_requests   = [];
   const other_requests = [];
-  let bytebase_instance_id = '';
 
   if (atCurrentTab === 'vpn') {
     // VPN 申请 Tab：阿里云 / 百度云
@@ -3817,30 +3687,6 @@ async function submitApplyAccount() {
       return;
     }
     selectedVpn.forEach(p => vpn_requests.push({ platform: p }));
-  } else if (atCurrentTab === 'system') {
-    // 系统账号 Tab：JumpServer / Bytebase / Kuboard / Grafana
-    if (document.getElementById('at-chk-jumpserver')?.checked)    cloud_platforms.push('jumpserver');
-    if (document.getElementById('at-chk-bytebase')?.checked)      cloud_platforms.push('bytebase');
-    if (document.getElementById('at-chk-kuboard')?.checked)       cloud_platforms.push('kuboard');
-    if (document.getElementById('at-chk-grafana-aws')?.checked)   cloud_platforms.push('grafana-aws');
-    if (document.getElementById('at-chk-grafana-wuwen')?.checked) cloud_platforms.push('grafana-wuwen');
-    if (document.getElementById('at-chk-grafana-baidu')?.checked) cloud_platforms.push('grafana-baidu');
-    if (cloud_platforms.length === 0) { errEl.textContent = '请至少勾选一个系统账号'; return; }
-
-    // Bytebase 多实例：必须选中一个实例
-    if (cloud_platforms.includes('bytebase')) {
-      const instId = document.getElementById('at-bb-instance')?.value;
-      if (!instId) { errEl.textContent = 'Bytebase：请选择一个实例（若无可用实例，请联系管理员配置）'; return; }
-      bytebase_instance_id = instId;
-    }
-
-    // 检查选中的系统平台是否已配置（bytebase 走实例校验，此处排除）
-    const unconfigured = cloud_platforms.filter(p => p !== 'bytebase' && !atCredStatus[p]);
-    if (unconfigured.length > 0) {
-      const names = unconfigured.map(p => PNAMES[p] || p).join('、');
-      errEl.textContent = `${names} 模块暂未启用，请联系管理员`;
-      return;
-    }
   } else {
     // 云资源 Tab：AWS / 阿里云 / 百度云
     const selectedClouds = ['aws','aliyun','baidu'].filter(p => document.getElementById(`at-chk-${p}`)?.checked);
@@ -3871,7 +3717,7 @@ async function submitApplyAccount() {
   }
 
   btn.disabled = true; btn.textContent = '提交中...';
-  const r = await post('/feishu/tickets', { notes, real_name, cloud_username, initial_password, cloud_platforms, iam_notes, vpn_requests, other_requests, bytebase_instance_id });
+  const r = await post('/feishu/tickets', { notes, real_name, cloud_username, initial_password, cloud_platforms, iam_notes, vpn_requests, other_requests });
   btn.disabled = false; btn.textContent = '提交申请';
 
   if (r.ok) {
