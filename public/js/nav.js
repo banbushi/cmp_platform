@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 function navTo(section) {
+  if (section === 'third-accounts') section = 'cloud-accounts';
   if (section !== 'overview' && section !== 'my-profile' && section !== 'perm-query' && _myRoleData) {
     if (!roleHasSection(_myRoleData, section)) {
       section = 'my-profile';
@@ -36,7 +37,6 @@ function navTo(section) {
 
   if (section === 'overview') loadOverview();
   else if (section === 'cloud-accounts') loadAccounts();
-  else if (section === 'third-accounts') loadThirdAccounts();
   else if (section === 'create') initCreate();
   else if (section === 'groups') loadGroups();
   else if (section === 'instances') loadInstances();

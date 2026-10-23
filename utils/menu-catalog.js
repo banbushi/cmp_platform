@@ -11,7 +11,6 @@ const MENU_CATALOG = [
   { group: 'accounts', label: '账号资源', children: [
     { section: 'cloud-accounts', label: '云账号' },
     { section: 'create', label: '创建账号' },
-    { section: 'third-accounts', label: '平台工具账号' },
     { section: 'groups', label: '组同步' },
     { section: 'policies', label: '策略管理' }
   ]},

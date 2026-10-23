@@ -2,7 +2,7 @@
 // 云平台配置
 // ─────────────────────────────────────────
 function switchIntegrationTab(name, el) {
-  ['cloud', 'feishu', 'jumpserver', 'bytebase', 'kuboard', 'grafana-aws', 'grafana-wuwen', 'grafana-baidu', 'sso'].forEach(t => {
+  ['cloud', 'feishu'].forEach(t => {
     document.getElementById(`itab-${t}`)?.classList.toggle('hidden', t !== name);
   });
   document.querySelectorAll('#sec-settings .filter-tab').forEach(b => b.classList.remove('active'));
@@ -11,8 +11,6 @@ function switchIntegrationTab(name, el) {
   } else {
     document.querySelector(`#sec-settings .filter-tab[onclick*="'${name}'"]`)?.classList.add('active');
   }
-  if (name === 'sso') loadOAuthClients();
-  if (name === 'bytebase') loadBytebaseInstances();
 }
 
 // ── Bytebase 多实例管理 ─────────────────────────────────────────

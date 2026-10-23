@@ -111,7 +111,7 @@ const GROUP_LABELS = {
 // 子菜单显示名，用于角色列表里展示已勾选的子菜单
 const SECTION_LABELS = {
   'apply-account': '账号申请', 'apply-resource': '资源申请', 'approval-tickets': '申请记录',
-  'cloud-accounts': '云账号', create: '创建账号', 'third-accounts': '平台工具账号', groups: '组同步', policies: '策略管理',
+  'cloud-accounts': '云账号', create: '创建账号', groups: '组同步', policies: '策略管理',
   instances: '云主机', clusters: '容器集群', 'pai-dsw': 'PAI DSW', jumpserver: '堡垒机管理',
   'rds-mysql': 'MySQL 实例', 'rds-postgres': 'PostgreSQL 实例', 'rds-redis': 'Redis 实例',
   'security-groups': '安全组', vpcs: 'VPC', subnets: '子网', 'ssl-certs': 'SSL 证书', 'dns-records': 'DNS 解析', 'vpn-clients': 'VPN 客户端',
@@ -157,7 +157,6 @@ const BUILTIN_ROLE_DEFAULTS = {
 // 导航相关
 const SECTION_GROUP = {
   'cloud-accounts': 'accounts',
-  'third-accounts': 'accounts',
   create: 'accounts',
   sync: 'accounts',
   groups: 'accounts',
